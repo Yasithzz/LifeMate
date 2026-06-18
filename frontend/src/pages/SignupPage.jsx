@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { registerUser } from '../lib/api'
 
 function passwordStrength(pw) {
   if (!pw) return { width: '0%', color: 'transparent', label: '' }
@@ -16,6 +17,7 @@ export default function SignupPage() {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   const strength = passwordStrength(form.password)
 
@@ -32,8 +34,14 @@ export default function SignupPage() {
       return
     }
     setLoading(true)
-    // TODO: POST /api/auth/register  { fullName, email, password }
-    setTimeout(() => setLoading(false), 1200)
+    try {
+      await registerUser({ fullName: form.fullName, email: form.email, password: form.password })
+      navigate('/login')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const inputClass =

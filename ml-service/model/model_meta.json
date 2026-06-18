@@ -1,0 +1,20 @@
+{
+  "features": [
+    "mood",
+    "workload",
+    "sleep_hours",
+    "energy_level",
+    "social_interaction",
+    "exercise_done",
+    "screen_time_hours",
+    "water_cups"
+  ],
+  "labels": [
+    "Very Low",
+    "Low",
+    "Normal",
+    "High",
+    "Very High"
+  ],
+  "accuracy": 0.8319
+}

@@ -1,0 +1,6 @@
+{
+    "java.compile.nullAnalysis.mode": "automatic",
+    "java.configuration.maven.userSettings": "${workspaceFolder}/backend/.mvn/settings.xml",
+    "java.maven.updateSnapshots": false,
+    "java.configuration.updateBuildConfiguration": "automatic"
+}
