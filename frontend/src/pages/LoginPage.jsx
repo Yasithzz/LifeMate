@@ -1,21 +1,32 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { loginUser } from '../lib/api'
 
 export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '', remember: false })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
     setForm(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }))
+    setError('')
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-    // TODO: POST /api/auth/login  { email, password }
-    setTimeout(() => setLoading(false), 1200)
+    setError('')
+    try {
+      const auth = await loginUser({ email: form.email, password: form.password })
+      navigate(auth.role === 'ADMIN' ? '/admin' : '/dashboard')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -87,6 +98,13 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
+
+            {/* Error */}
+            {error && (
+              <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+                {error}
+              </p>
+            )}
 
             {/* Submit */}
             <button type="submit" disabled={loading}

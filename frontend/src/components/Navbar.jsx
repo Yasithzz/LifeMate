@@ -18,6 +18,7 @@ function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMenuOpen(false) }, [location.pathname])
 
   const isAuthPage = ['/login', '/signup', '/forgot-password'].includes(location.pathname)
