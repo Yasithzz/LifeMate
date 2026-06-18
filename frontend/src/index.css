@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+html, body {
+  background-color: #050213;
+}
+
 /* ── Accent color theming ─────────────────────────────────────────
    Each data-accent overrides Tailwind 4's internal CSS custom
    properties so that from-violet-600, to-pink-500, text-violet-400,
