@@ -99,14 +99,20 @@ public class WeeklyScheduleService {
         ws.setLeaveDays(new ArrayList<>(leaveDates));
 
         String[] DAYS = {"MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY","SUNDAY"};
+        // User-configured working days; default Mon–Fri if not set
+        java.util.Set<String> workingDaySet = new HashSet<>(
+            user.getWorkingDays() != null && !user.getWorkingDays().isEmpty()
+                ? user.getWorkingDays()
+                : List.of("MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"));
+
         for (int i = 0; i < 7; i++) {
-            LocalDate date   = monday.plusDays(i);
-            String dateStr   = date.format(FMT);
-            boolean isLeave  = leaveDates.contains(dateStr);
-            boolean isWeekend= (i >= 5);
+            LocalDate date      = monday.plusDays(i);
+            String dateStr      = date.format(FMT);
+            boolean isLeave     = leaveDates.contains(dateStr);
+            boolean isWorkingDay = workingDaySet.contains(DAYS[i]);
             ws.getDays().put(DAYS[i], isLeave
                     ? leaveSlots()
-                    : buildDay(stressIndex, isWeekend, user));
+                    : buildDay(stressIndex, !isWorkingDay, user));
         }
         return repo.save(ws);
     }
