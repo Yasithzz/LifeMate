@@ -7,6 +7,7 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.List;
 
 @Getter
 @Setter
@@ -35,6 +36,11 @@ public class User {
     private String workoutPreference = "Moderate";
     private String freeTimePreference = "Reading";
     private Boolean reminderPreference = true;
+
+    /** Days the user works — drives the weekly schedule generator.
+     *  Values match DayOfWeek name: MONDAY, TUESDAY, … SUNDAY  */
+    private List<String> workingDays = List.of(
+            "MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY");
 
     // Security
     private boolean emailVerified = false;

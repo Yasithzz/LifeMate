@@ -1,5 +1,7 @@
 package com.lifemate.backend.dto;
 
+import java.util.List;
+
 public record ProfileResponse(
         String id,
         String fullName,
@@ -11,5 +13,6 @@ public record ProfileResponse(
         String mealPreference,
         String workoutPreference,
         String freeTimePreference,
-        Boolean reminderPreference
+        Boolean reminderPreference,
+        List<String> workingDays
 ) {}

@@ -33,17 +33,31 @@ public class AdminSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) {
         try {
-            if (userRepository.existsByRole(Role.ADMIN)) {
-                log.info("Admin account already exists, skipping seed");
-                return;
+            String targetEmail = adminEmail.trim().toLowerCase();
+            java.util.List<User> admins = userRepository.findAll().stream()
+                    .filter(u -> u.getRole() == Role.ADMIN)
+                    .toList();
+
+            if (admins.isEmpty()) {
+                // No admin exists — create one
+                User admin = new User();
+                admin.setFullName("Admin");
+                admin.setEmail(targetEmail);
+                admin.setPassword(passwordEncoder.encode(adminPassword));
+                admin.setRole(Role.ADMIN);
+                userRepository.save(admin);
+                log.info("Seeded super admin account: {}", targetEmail);
+            } else {
+                User existing = admins.get(0);
+                if (!existing.getEmail().equals(targetEmail)) {
+                    // Config email changed — update the admin's login email
+                    existing.setEmail(targetEmail);
+                    userRepository.save(existing);
+                    log.info("Admin email updated to: {}", targetEmail);
+                } else {
+                    log.info("Admin account already exists: {}", existing.getEmail());
+                }
             }
-            User admin = new User();
-            admin.setFullName("Admin");
-            admin.setEmail(adminEmail.trim().toLowerCase());
-            admin.setPassword(passwordEncoder.encode(adminPassword));
-            admin.setRole(Role.ADMIN);
-            userRepository.save(admin);
-            log.info("Seeded super admin account: {}", admin.getEmail());
         } catch (Exception ex) {
             log.warn("AdminSeeder skipped — DB not yet available ({}). Will retry on next restart.", ex.getMessage());
         }

@@ -30,7 +30,8 @@ public class SecurityService {
 
     public SecurityInfoResponse getInfo(String email) {
         User user = findUser(email);
-        return new SecurityInfoResponse(user.isEmailVerified(), user.isPhoneVerified(), maskPhone(user.getPhoneNumber()));
+        return new SecurityInfoResponse(user.isEmailVerified(), user.isPhoneVerified(),
+                maskPhone(user.getPhoneNumber()), smsService.isEnabled());
     }
 
     // ---------- Email verification ----------
@@ -51,11 +52,16 @@ public class SecurityService {
     // ---------- Phone verification ----------
 
     public void sendPhoneVerificationOtp(String email, String phoneNumber) {
-        findUser(email);
-        String otp = otpService.generateAndStore(phoneNumber, OtpEntry.OtpType.PHONE_VERIFICATION);
-        smsService.sendOtp(phoneNumber, otp, "Phone Verification");
-        // Store phone number on user (unverified until OTP confirmed)
         User user = findUser(email);
+        String otp = otpService.generateAndStore(phoneNumber, OtpEntry.OtpType.PHONE_VERIFICATION);
+
+        if (smsService.isEnabled()) {
+            smsService.sendOtp(phoneNumber, otp, "Phone Verification");
+        } else {
+            // SMS not configured — deliver OTP to user's email instead
+            emailService.sendOtp(user.getEmail(), otp, "Phone Verification (sent to email — SMS not configured)");
+        }
+
         user.setPhoneNumber(phoneNumber);
         user.setPhoneVerified(false);
         userRepository.save(user);

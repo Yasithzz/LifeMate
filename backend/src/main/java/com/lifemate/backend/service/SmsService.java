@@ -33,11 +33,13 @@ public class SmsService {
         this.enabled = !accountSid.isBlank() && !authToken.isBlank() && !fromNumber.isBlank();
     }
 
+    public boolean isEnabled() { return enabled; }
+
     public void sendOtp(String to, String otp, String purpose) {
         String body = "Your LifeMate OTP for " + purpose + ": " + otp + ". Expires in 10 minutes. Do not share.";
 
         if (!enabled) {
-            log.warn("Twilio not configured. SMS OTP for {} [{}]: {}", to, purpose, otp);
+            log.warn("=== SMS OTP (Twilio not configured) === to={} purpose={} code={}", to, purpose, otp);
             return;
         }
 

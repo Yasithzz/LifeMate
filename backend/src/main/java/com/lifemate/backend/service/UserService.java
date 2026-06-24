@@ -31,7 +31,8 @@ public class UserService {
         User u = findByEmail(email);
         return new ProfileResponse(u.getId(), u.getFullName(), u.getEmail(), u.getRole().name(),
                 u.getSleepSchedule(), u.getWakeTime(), u.getWorkHours(),
-                u.getMealPreference(), u.getWorkoutPreference(), u.getFreeTimePreference(), u.getReminderPreference());
+                u.getMealPreference(), u.getWorkoutPreference(), u.getFreeTimePreference(),
+                u.getReminderPreference(), u.getWorkingDays());
     }
 
     public ProfileResponse updateProfile(String email, ProfileRequest req) {
@@ -43,6 +44,8 @@ public class UserService {
         if (req.getWorkoutPreference() != null) u.setWorkoutPreference(req.getWorkoutPreference());
         if (req.getFreeTimePreference() != null) u.setFreeTimePreference(req.getFreeTimePreference());
         if (req.getReminderPreference() != null) u.setReminderPreference(req.getReminderPreference());
+        if (req.getWorkingDays() != null && !req.getWorkingDays().isEmpty())
+            u.setWorkingDays(req.getWorkingDays());
         userRepository.save(u);
         return getProfile(email);
     }

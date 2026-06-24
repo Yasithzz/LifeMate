@@ -7,19 +7,30 @@ const MEAL_PREFS = ['Balanced', 'Vegetarian', 'Vegan', 'High-Protein', 'Keto', '
 const WORKOUT_PREFS = ['Light', 'Moderate', 'Intense', 'None']
 const FREE_TIME = ['Reading', 'Gaming', 'Music', 'Outdoor activities', 'Socializing', 'Creative arts', 'Sports', 'Other']
 
+const ALL_DAYS = [
+  { key: 'MONDAY',    short: 'Mon', label: 'Monday'    },
+  { key: 'TUESDAY',   short: 'Tue', label: 'Tuesday'   },
+  { key: 'WEDNESDAY', short: 'Wed', label: 'Wednesday' },
+  { key: 'THURSDAY',  short: 'Thu', label: 'Thursday'  },
+  { key: 'FRIDAY',    short: 'Fri', label: 'Friday'    },
+  { key: 'SATURDAY',  short: 'Sat', label: 'Saturday'  },
+  { key: 'SUNDAY',    short: 'Sun', label: 'Sunday'    },
+]
+const DEFAULT_WORKING_DAYS = ['MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY']
+
 const inputCls = 'bg-white/5 border border-violet-500/20 rounded-xl px-4 py-2.5 text-[14px] text-[#E2D9F3] placeholder-[#6B5E8A] outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all duration-200 w-full'
 const selectCls = inputCls + ' cursor-pointer'
 
 export default function ProfilePage() {
   const session = getSession()
-  const [form, setForm] = useState({ sleepSchedule: '22:30', wakeTime: '07:00', workHours: '09:00-17:00', mealPreference: 'Balanced', workoutPreference: 'Moderate', freeTimePreference: 'Reading', reminderPreference: true })
+  const [form, setForm] = useState({ sleepSchedule: '22:30', wakeTime: '07:00', workHours: '09:00-17:00', mealPreference: 'Balanced', workoutPreference: 'Moderate', freeTimePreference: 'Reading', reminderPreference: true, workingDays: DEFAULT_WORKING_DAYS })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
     getProfile().then(p => {
-      if (p) setForm({ sleepSchedule: p.sleepSchedule ?? '22:30', wakeTime: p.wakeTime ?? '07:00', workHours: p.workHours ?? '09:00-17:00', mealPreference: p.mealPreference ?? 'Balanced', workoutPreference: p.workoutPreference ?? 'Moderate', freeTimePreference: p.freeTimePreference ?? 'Reading', reminderPreference: p.reminderPreference ?? true })
+      if (p) setForm({ sleepSchedule: p.sleepSchedule ?? '22:30', wakeTime: p.wakeTime ?? '07:00', workHours: p.workHours ?? '09:00-17:00', mealPreference: p.mealPreference ?? 'Balanced', workoutPreference: p.workoutPreference ?? 'Moderate', freeTimePreference: p.freeTimePreference ?? 'Reading', reminderPreference: p.reminderPreference ?? true, workingDays: p.workingDays ?? DEFAULT_WORKING_DAYS })
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
@@ -70,6 +81,47 @@ export default function ProfilePage() {
               <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Work Hours</label>
               <input type="text" placeholder="09:00-17:00" value={form.workHours} onChange={e => setForm(f => ({ ...f, workHours: e.target.value }))} className={inputCls} />
             </div>
+
+            {/* Working Days */}
+            <div>
+              <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1">Regular Working Days</label>
+              <p className="text-[11px] text-[#6B5E8A] mb-2.5">
+                Selected days get a work-focused schedule. Other days get a personal/leisure schedule. Holidays & leave days are skipped entirely.
+              </p>
+              <div className="flex gap-1.5 flex-wrap">
+                {ALL_DAYS.map(({ key, short, label }) => {
+                  const isSelected = form.workingDays.includes(key)
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      title={label}
+                      onClick={() => {
+                        setForm(f => ({
+                          ...f,
+                          workingDays: isSelected
+                            ? f.workingDays.filter(d => d !== key)
+                            : [...f.workingDays, key],
+                        }))
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-[13px] font-semibold border transition-all duration-200 ${
+                        isSelected
+                          ? 'bg-violet-600/25 border-violet-500/50 text-violet-300 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.2)]'
+                          : 'bg-white/5 border-violet-500/10 text-[#7B6A9A] hover:border-violet-500/30 hover:text-violet-300'
+                      }`}
+                    >
+                      {short}
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="text-[11px] text-[#7B6A9A] mt-2">
+                {form.workingDays.length === 0
+                  ? 'No working days selected — all days will get a personal schedule'
+                  : `${form.workingDays.length} working day${form.workingDays.length > 1 ? 's' : ''} selected`}
+              </p>
+            </div>
+
             <div>
               <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Meal Preference</label>
               <select value={form.mealPreference} onChange={e => setForm(f => ({ ...f, mealPreference: e.target.value }))} className={selectCls}>

@@ -60,7 +60,7 @@ function ScaleSelector({ value, onChange, labels }) {
 }
 
 /* ─── Holiday / Leave Mini-Calendar ─────────────────────────────── */
-function HolidayCalendar({ holidays, onAdd, onRemove }) {
+function HolidayCalendar({ holidays, onAdd, onRemove, scheduleRefreshing, onRefreshSchedule }) {
   const today = new Date()
   const [viewY, setViewY] = useState(today.getFullYear())
   const [viewM, setViewM] = useState(today.getMonth())
@@ -86,15 +86,34 @@ function HolidayCalendar({ holidays, onAdd, onRemove }) {
 
   return (
     <div className="bg-white/5 border border-violet-500/15 rounded-2xl p-5">
-      <div className="flex items-center gap-3 mb-4">
-        <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
-          <CalendarDays size={17} className="text-amber-400" />
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-amber-500/15 border border-amber-500/20 flex items-center justify-center">
+            <CalendarDays size={17} className="text-amber-400" />
+          </div>
+          <div>
+            <h3 className="text-[14px] font-bold text-white">Holidays & Leave Days</h3>
+            <p className="text-[11px] text-[#7B6A9A]">These days will be skipped in your weekly schedule</p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-[14px] font-bold text-white">Holidays & Leave Days</h3>
-          <p className="text-[11px] text-[#7B6A9A]">These days will be skipped in your weekly schedule</p>
-        </div>
+        {/* Refresh Schedule button */}
+        <button
+          onClick={onRefreshSchedule}
+          disabled={scheduleRefreshing}
+          className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-xl bg-violet-600/15 border border-violet-500/25 text-violet-400 hover:bg-violet-600/25 hover:border-violet-500/40 transition-all duration-200 disabled:opacity-60 flex-shrink-0"
+        >
+          <RefreshCw size={13} className={scheduleRefreshing ? 'animate-spin' : ''} />
+          {scheduleRefreshing ? 'Refreshing…' : 'Refresh Schedule'}
+        </button>
       </div>
+
+      {/* Refresh status banner */}
+      {scheduleRefreshing && (
+        <div className="flex items-center gap-2 text-[12px] text-violet-300 bg-violet-500/10 border border-violet-500/20 rounded-xl px-3 py-2 mb-3">
+          <RefreshCw size={13} className="animate-spin flex-shrink-0" />
+          Regenerating your weekly schedule with updated leave days…
+        </div>
+      )}
 
       {/* Month nav */}
       <div className="flex items-center justify-between mb-3">
@@ -144,16 +163,29 @@ function HolidayCalendar({ holidays, onAdd, onRemove }) {
         <span className="text-[10px] text-[#6B5E8A]">Click to toggle · Leave → Holiday → Remove</span>
       </div>
 
-      {/* List */}
+      {/* List with Update button */}
       {holidays.length > 0 && (
-        <div className="mt-4 space-y-1.5 max-h-36 overflow-y-auto">
+        <div className="mt-4 space-y-1.5 max-h-48 overflow-y-auto">
           {holidays.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(h => (
-            <div key={h.date} className="flex items-center justify-between px-3 py-1.5 bg-white/5 rounded-lg">
-              <div>
+            <div key={h.date} className="flex items-center justify-between px-3 py-2 bg-white/5 rounded-lg group">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="text-[12px] text-white font-medium">{h.date}</span>
-                <span className={`ml-2 text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${h.type==='HOLIDAY'?'bg-amber-500/20 text-amber-400':'bg-violet-500/20 text-violet-400'}`}>{h.type}</span>
+                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full flex-shrink-0 ${
+                  h.type==='HOLIDAY' ? 'bg-amber-500/20 text-amber-400' : 'bg-violet-500/20 text-violet-400'
+                }`}>{h.type}</span>
               </div>
-              <button onClick={() => onRemove(h.date)} className="p-1 text-[#4A3F6A] hover:text-red-400 transition-colors"><Trash2 size={13}/></button>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {/* Update: toggle LEAVE ↔ HOLIDAY */}
+                <button
+                  onClick={() => onAdd(h.date, h.type === 'LEAVE' ? 'HOLIDAY' : 'LEAVE')}
+                  title={`Change to ${h.type === 'LEAVE' ? 'Holiday' : 'Leave'}`}
+                  className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/5 hover:bg-violet-500/15 text-[#7B6A9A] hover:text-violet-300 transition-colors border border-transparent hover:border-violet-500/20">
+                  → {h.type === 'LEAVE' ? 'Holiday' : 'Leave'}
+                </button>
+                <button onClick={() => onRemove(h.date)} title="Remove" className="p-1 text-[#4A3F6A] hover:text-red-400 transition-colors">
+                  <Trash2 size={13}/>
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -210,23 +242,34 @@ export default function LifestylePage() {
     catch { /* ignore */ } finally { setRefreshing(false) }
   }
 
+  const [calendarScheduleRefreshing, setCalendarScheduleRefreshing] = useState(false)
+
+  const refreshScheduleAfterHolidayChange = async () => {
+    setCalendarScheduleRefreshing(true)
+    localStorage.setItem('lm_schedule_needs_refresh', Date.now().toString())
+    try { await generateWeeklySchedule(result?.stressLevel) }
+    catch { /* non-fatal */ }
+    finally { setCalendarScheduleRefreshing(false) }
+  }
+
   const handleAddHoliday = async (date, type) => {
-    // Optimistic update — apply instantly, sync in background
+    // Optimistic UI update — instant
     const optimistic = { date, type, note: '' }
     setHolidays(prev => [...prev.filter(x=>x.date!==date), optimistic])
     try {
       const h = await addHoliday(date, type)
       setHolidays(prev => prev.map(x => x.date===date ? h : x))
     } catch { setHolidays(prev => prev.filter(x=>x.date!==date)) }
-    localStorage.setItem('lm_schedule_needs_refresh', Date.now().toString())
+    // Regenerate schedule so this day shows as Rest Day
+    refreshScheduleAfterHolidayChange()
   }
 
   const handleRemoveHoliday = async (date) => {
-    // Optimistic update — remove instantly
+    // Optimistic UI update — instant
     setHolidays(prev => prev.filter(x=>x.date!==date))
-    try { await removeHoliday(date) }
-    catch (err) { /* already removed from UI, ignore */ }
-    localStorage.setItem('lm_schedule_needs_refresh', Date.now().toString())
+    try { await removeHoliday(date) } catch { /* ignore */ }
+    // Regenerate schedule so this day gets a real schedule back
+    refreshScheduleAfterHolidayChange()
   }
 
   const sc = result?.stressLevel ? STRESS_COLORS[result.stressLevel] : null
@@ -393,7 +436,13 @@ export default function LifestylePage() {
         </div>
 
         {/* Holiday calendar */}
-        <HolidayCalendar holidays={holidays} onAdd={handleAddHoliday} onRemove={handleRemoveHoliday}/>
+        <HolidayCalendar
+          holidays={holidays}
+          onAdd={handleAddHoliday}
+          onRemove={handleRemoveHoliday}
+          scheduleRefreshing={calendarScheduleRefreshing}
+          onRefreshSchedule={refreshScheduleAfterHolidayChange}
+        />
 
         {/* History */}
         {history.length > 0 && (

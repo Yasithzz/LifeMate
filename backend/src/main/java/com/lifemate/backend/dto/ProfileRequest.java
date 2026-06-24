@@ -3,6 +3,8 @@ package com.lifemate.backend.dto;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
 public class ProfileRequest {
@@ -13,4 +15,5 @@ public class ProfileRequest {
     private String workoutPreference;
     private String freeTimePreference;
     private Boolean reminderPreference;
+    private List<String> workingDays;
 }
