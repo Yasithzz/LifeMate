@@ -1,15 +1,14 @@
 import { useEffect, useState } from 'react'
 import {
-  Palette, Globe, Lock, Key, Shield, Mail, Phone,
+  Palette, Globe, Lock, Key, Shield, Mail,
   CheckCircle, AlertCircle, Loader2, Eye, EyeOff,
-  RefreshCw, Sun, Moon, Monitor, Check, ChevronRight,
+  RefreshCw, Sun, Moon, Monitor, Check,
   ShieldCheck,
 } from 'lucide-react'
 import AdminLayout from '../../components/AdminLayout'
 import {
   changePassword, getSession, getSecurityInfo,
   sendEmailVerificationOtp, verifyEmail,
-  sendPhoneVerificationOtp, verifyPhone,
   forgotPasswordInitiate, forgotPasswordReset,
 } from '../../lib/api'
 
@@ -96,17 +95,9 @@ export default function AdminSettingsPage() {
   const [evBusy, setEvBusy] = useState(false)
   const [evError, setEvError] = useState('')
 
-  // phone otp
-  const [pvPhone, setPvPhone] = useState('')
-  const [pvOtp, setPvOtp] = useState('')
-  const [pvSent, setPvSent] = useState(false)
-  const [pvBusy, setPvBusy] = useState(false)
-  const [pvError, setPvError] = useState('')
-
   // forgot pw
   const [fpStep, setFpStep] = useState(0)
   const [fpEmail, setFpEmail] = useState('')
-  const [fpMethod, setFpMethod] = useState('email')
   const [fpOtp, setFpOtp] = useState('')
   const [fpPw, setFpPw] = useState('')
   const [fpCpw, setFpCpw] = useState('')
@@ -133,7 +124,7 @@ export default function AdminSettingsPage() {
 
   const handleFpInitiate = async (e) => {
     e.preventDefault(); setFpError(''); setFpBusy(true)
-    try { await forgotPasswordInitiate(fpEmail, fpMethod); setFpStep(1) }
+    try { await forgotPasswordInitiate(fpEmail, 'email'); setFpStep(1) }
     catch (err) { setFpError(err.message) } finally { setFpBusy(false) }
   }
 
@@ -154,17 +145,6 @@ export default function AdminSettingsPage() {
     e.preventDefault(); setEvError(''); setEvBusy(true)
     try { const s = await verifyEmail(evOtp); setSecurity(s); setEvSent(false); setEvOtp('') }
     catch (e) { setEvError(e.message) } finally { setEvBusy(false) }
-  }
-
-  const sendPhoneOtp = async (e) => {
-    e.preventDefault(); setPvError(''); setPvBusy(true)
-    try { await sendPhoneVerificationOtp(pvPhone); setPvSent(true) } catch (e) { setPvError(e.message) } finally { setPvBusy(false) }
-  }
-
-  const doVerifyPhone = async (e) => {
-    e.preventDefault(); setPvError(''); setPvBusy(true)
-    try { const s = await verifyPhone(pvOtp); setSecurity(s); setPvSent(false); setPvOtp('') }
-    catch (e) { setPvError(e.message) } finally { setPvBusy(false) }
   }
 
   const sel = inputCls + ' cursor-pointer'
@@ -289,22 +269,11 @@ export default function AdminSettingsPage() {
           {/* Forgot Password */}
           {active === 'forgot' && (
             <div className="space-y-6 max-w-lg">
-              <div><h2 className="text-[18px] font-bold text-white mb-1">Forgot Password</h2><p className="text-[#7B6A9A] text-sm">Reset via OTP sent to your email or verified phone number</p></div>
+              <div><h2 className="text-[18px] font-bold text-white mb-1">Forgot Password</h2><p className="text-[#7B6A9A] text-sm">Reset via OTP sent to your email</p></div>
               {fpSuccess && <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2"><CheckCircle size={14} />Password reset! Log in with your new password.</div>}
               {fpStep === 0 && (
                 <form onSubmit={handleFpInitiate} className="space-y-4">
                   <div><label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Admin email</label><input type="email" className={inputCls} placeholder="admin@lifemate.com" required value={fpEmail} onChange={e => { setFpEmail(e.target.value); setFpError('') }} /></div>
-                  <div>
-                    <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-2">Send OTP via</label>
-                    <div className="flex gap-2">
-                      {[{ v: 'email', icon: Mail, label: 'Email' }, { v: 'phone', icon: Phone, label: 'Phone' }].map(({ v, icon: Icon, label }) => (
-                        <button key={v} type="button" onClick={() => setFpMethod(v)} disabled={v === 'phone' && !security?.phoneVerified}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold border transition-all duration-200 ${fpMethod === v ? 'bg-violet-600/25 border-violet-500/50 text-violet-300' : 'bg-white/5 border-violet-500/15 text-[#7B6A9A] hover:border-violet-500/30 hover:text-violet-300'} disabled:opacity-40 disabled:cursor-not-allowed`}>
-                          <Icon size={14} />{label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
                   {fpError && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{fpError}</p>}
                   <button type="submit" disabled={fpBusy} className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold rounded-xl text-[14px] hover:bg-amber-500/25 transition-colors disabled:opacity-60">
                     {fpBusy && <Loader2 size={14} className="animate-spin" />} Send OTP
@@ -319,7 +288,7 @@ export default function AdminSettingsPage() {
                     <div className="flex gap-2">
                       <input className={inputCls + ' text-center text-xl tracking-[0.4em] font-bold'} placeholder="000000" maxLength={6} value={fpOtp}
                         onChange={e => { setFpOtp(e.target.value.replace(/\D/g, '')); setFpError('') }} autoFocus />
-                      <button type="button" onClick={async () => { setFpResend(true); try { await forgotPasswordInitiate(fpEmail, fpMethod) } catch { /* ignore */ } finally { setFpResend(false) } }}
+                      <button type="button" onClick={async () => { setFpResend(true); try { await forgotPasswordInitiate(fpEmail, 'email') } catch { /* ignore */ } finally { setFpResend(false) } }}
                         disabled={fpResend} className="p-3.5 bg-white/5 border border-violet-500/20 rounded-xl text-[#7B6A9A] hover:text-violet-400 transition-colors">
                         <RefreshCw size={16} className={fpResend ? 'animate-spin' : ''} />
                       </button>
@@ -381,38 +350,6 @@ export default function AdminSettingsPage() {
                     {security?.emailVerified && <p className="text-[12px] text-emerald-400">Email verified — can be used for OTP-based password recovery.</p>}
                   </div>
 
-                  {/* Phone */}
-                  <div className="bg-white/5 border border-violet-500/15 rounded-2xl p-5 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center"><Phone size={18} className="text-violet-400" /></div>
-                        <div><p className="text-[14px] font-bold text-white">Phone Number</p><p className="text-[12px] text-[#7B6A9A]">{security?.phoneNumberMasked ?? 'No phone number added'}</p></div>
-                      </div>
-                      <Badge verified={security?.phoneVerified} />
-                    </div>
-                    {pvSent ? (
-                      <form onSubmit={doVerifyPhone} className="space-y-3">
-                        <p className="text-[12px] text-[#7B6A9A]">Enter the 6-digit code sent to {pvPhone}.</p>
-                        <div className="flex gap-2">
-                          <input className={inputCls + ' text-center text-xl tracking-[0.3em] font-bold'} placeholder="000000" maxLength={6} value={pvOtp} onChange={e => { setPvOtp(e.target.value.replace(/\D/g, '')); setPvError('') }} autoFocus />
-                          <button type="button" onClick={() => { setPvSent(false); setPvOtp('') }} className="p-3 bg-white/5 border border-violet-500/20 rounded-xl text-[#7B6A9A] hover:text-violet-400 transition-colors"><RefreshCw size={15} /></button>
-                        </div>
-                        {pvError && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{pvError}</p>}
-                        <button type="submit" disabled={pvBusy || pvOtp.length < 6} className="flex items-center gap-2 px-4 py-2 bg-violet-500/15 border border-violet-500/25 text-violet-400 font-semibold rounded-xl text-[13px] hover:bg-violet-500/25 transition-colors disabled:opacity-60">
-                          {pvBusy && <Loader2 size={13} className="animate-spin" />} Verify Phone
-                        </button>
-                      </form>
-                    ) : (
-                      <form onSubmit={sendPhoneOtp} className="flex gap-2">
-                        <input className={inputCls} placeholder="+94771234567" value={pvPhone} onChange={e => { setPvPhone(e.target.value); setPvError('') }} />
-                        <button type="submit" disabled={pvBusy || !pvPhone} className="flex-shrink-0 flex items-center gap-1.5 px-4 py-3 bg-violet-500/15 border border-violet-500/20 text-violet-400 rounded-xl text-[13px] font-semibold hover:bg-violet-500/25 transition-colors disabled:opacity-60">
-                          {pvBusy ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />} Send OTP
-                        </button>
-                      </form>
-                    )}
-                    {pvError && !pvSent && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{pvError}</p>}
-                    {security?.phoneVerified && <p className="text-[12px] text-emerald-400">Phone verified — can receive OTPs for password recovery.</p>}
-                  </div>
                 </div>
               )
           )}

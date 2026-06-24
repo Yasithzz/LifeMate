@@ -32,7 +32,7 @@ public class EmailService {
 
     public void sendOtp(String to, String otp, String purpose) {
         if (!enabled) {
-            log.warn("Email not configured — OTP for {} [{}]: {}", to, purpose, otp);
+            log.warn("=== OTP (email disabled) === recipient={} purpose={} code={}", to, purpose, otp);
             return;
         }
         try {
@@ -46,6 +46,7 @@ public class EmailService {
             log.info("OTP email sent to {}", to);
         } catch (MessagingException | MailException e) {
             log.error("Failed to send OTP email to {}: {}", to, e.getMessage());
+            log.warn("=== OTP (email failed) === recipient={} purpose={} code={}", to, purpose, otp);
         }
     }
 

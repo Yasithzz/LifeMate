@@ -3,5 +3,6 @@ package com.lifemate.backend.dto;
 public record SecurityInfoResponse(
         boolean emailVerified,
         boolean phoneVerified,
-        String phoneNumberMasked
+        String phoneNumberMasked,
+        boolean smsEnabled
 ) {}

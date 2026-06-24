@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
-  Palette, Globe, Lock, Key, Shield, Mail, Phone,
+  Palette, Globe, Lock, Key, Shield, Mail,
   CheckCircle, AlertCircle, Loader2, Eye, EyeOff,
-  RefreshCw, Sun, Moon, Monitor, Check, ChevronRight,
+  RefreshCw, Sun, Moon, Monitor, Check,
 } from 'lucide-react'
 import UserLayout from '../../components/UserLayout'
 import {
   changePassword, getSecurityInfo,
   sendEmailVerificationOtp, verifyEmail,
-  sendPhoneVerificationOtp, verifyPhone,
   forgotPasswordInitiate, forgotPasswordReset,
 } from '../../lib/api'
 
@@ -237,10 +236,9 @@ function ChangePasswordSection() {
 }
 
 // ─── Forgot Password section ──────────────────────────────────────
-function ForgotPasswordSection({ security }) {
+function ForgotPasswordSection() {
   const [step, setStep] = useState(0)
   const [email, setEmail] = useState('')
-  const [method, setMethod] = useState('email')
   const [otp, setOtp] = useState('')
   const [pw, setPw] = useState('')
   const [cpw, setCpw] = useState('')
@@ -251,7 +249,7 @@ function ForgotPasswordSection({ security }) {
 
   const initiate = async (e) => {
     e.preventDefault(); setError(''); setLoading(true)
-    try { await forgotPasswordInitiate(email, method); setStep(1) }
+    try { await forgotPasswordInitiate(email, 'email'); setStep(1) }
     catch (err) { setError(err.message) } finally { setLoading(false) }
   }
 
@@ -267,7 +265,7 @@ function ForgotPasswordSection({ security }) {
     <div className="space-y-6 max-w-lg">
       <div>
         <h2 className="text-[18px] font-bold text-white mb-1">Forgot Password</h2>
-        <p className="text-[#7B6A9A] text-sm">Reset your password using a one-time code sent to your email or verified phone</p>
+        <p className="text-[#7B6A9A] text-sm">Reset your password using a one-time code sent to your email</p>
       </div>
 
       {success && <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2"><CheckCircle size={14} />Password reset! You can now log in with your new password.</div>}
@@ -277,19 +275,6 @@ function ForgotPasswordSection({ security }) {
           <div>
             <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Your email address</label>
             <input type="email" className={inputCls} placeholder="you@example.com" required value={email} onChange={e => { setEmail(e.target.value); setError('') }} />
-          </div>
-          <div>
-            <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-2">Send OTP via</label>
-            <div className="flex gap-2">
-              {[{ v: 'email', icon: Mail, label: 'Email' }, { v: 'phone', icon: Phone, label: 'Phone' }].map(({ v, icon: Icon, label }) => (
-                <button key={v} type="button" onClick={() => setMethod(v)}
-                  disabled={v === 'phone' && !security?.phoneVerified}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold border transition-all duration-200 ${method === v ? 'bg-violet-600/25 border-violet-500/50 text-violet-300' : 'bg-white/5 border-violet-500/15 text-[#7B6A9A] hover:border-violet-500/30 hover:text-violet-300'} disabled:opacity-40 disabled:cursor-not-allowed`}>
-                  <Icon size={14} />{label}
-                  {v === 'phone' && !security?.phoneVerified && <span className="text-[10px] opacity-60">(not verified)</span>}
-                </button>
-              ))}
-            </div>
           </div>
           {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{error}</p>}
           <button type="submit" disabled={loading}
@@ -309,7 +294,7 @@ function ForgotPasswordSection({ security }) {
             <div className="flex gap-2">
               <input className={inputCls + ' text-center text-xl tracking-[0.4em] font-bold'} placeholder="000000" maxLength={6} value={otp}
                 onChange={e => { setOtp(e.target.value.replace(/\D/g, '')); setError('') }} autoFocus />
-              <button type="button" onClick={async () => { setResending(true); try { await forgotPasswordInitiate(email, method) } catch { /* ignore */ } finally { setResending(false) } }}
+              <button type="button" onClick={async () => { setResending(true); try { await forgotPasswordInitiate(email, 'email') } catch { /* ignore */ } finally { setResending(false) } }}
                 disabled={resending} className="flex-shrink-0 p-3.5 bg-white/5 border border-violet-500/20 rounded-xl text-[#7B6A9A] hover:text-violet-400 hover:border-violet-500/30 transition-all">
                 <RefreshCw size={16} className={resending ? 'animate-spin' : ''} />
               </button>
@@ -345,12 +330,6 @@ function VerificationsSection({ security, setSecurity }) {
   const [evBusy, setEvBusy] = useState(false)
   const [evError, setEvError] = useState('')
 
-  const [pvPhone, setPvPhone] = useState('')
-  const [pvOtp, setPvOtp] = useState('')
-  const [pvSent, setPvSent] = useState(false)
-  const [pvBusy, setPvBusy] = useState(false)
-  const [pvError, setPvError] = useState('')
-
   const sendEmailOtp = async () => {
     setEvError(''); setEvBusy(true)
     try { await sendEmailVerificationOtp(); setEvSent(true) } catch (e) { setEvError(e.message) } finally { setEvBusy(false) }
@@ -358,14 +337,6 @@ function VerificationsSection({ security, setSecurity }) {
   const doVerifyEmail = async (e) => {
     e.preventDefault(); setEvError(''); setEvBusy(true)
     try { const s = await verifyEmail(evOtp); setSecurity(s); setEvSent(false); setEvOtp('') } catch (e) { setEvError(e.message) } finally { setEvBusy(false) }
-  }
-  const sendPhoneOtp = async (e) => {
-    e.preventDefault(); setPvError(''); setPvBusy(true)
-    try { await sendPhoneVerificationOtp(pvPhone); setPvSent(true) } catch (e) { setPvError(e.message) } finally { setPvBusy(false) }
-  }
-  const doVerifyPhone = async (e) => {
-    e.preventDefault(); setPvError(''); setPvBusy(true)
-    try { const s = await verifyPhone(pvOtp); setSecurity(s); setPvSent(false); setPvOtp('') } catch (e) { setPvError(e.message) } finally { setPvBusy(false) }
   }
 
   return (
@@ -418,49 +389,6 @@ function VerificationsSection({ security, setSecurity }) {
         )}
       </div>
 
-      {/* Phone */}
-      <div className="bg-white/5 border border-violet-500/15 rounded-2xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/20 flex items-center justify-center"><Phone size={18} className="text-violet-400" /></div>
-            <div>
-              <p className="text-[14px] font-bold text-white">Phone Number</p>
-              <p className="text-[12px] text-[#7B6A9A]">{security?.phoneNumberMasked ?? 'No phone number added yet'}</p>
-            </div>
-          </div>
-          <Badge verified={security?.phoneVerified} />
-        </div>
-
-        {pvSent ? (
-          <form onSubmit={doVerifyPhone} className="space-y-3">
-            <p className="text-[12px] text-[#7B6A9A]">Enter the 6-digit code sent to {pvPhone}.</p>
-            <div className="flex gap-2">
-              <input className={inputCls + ' text-center text-xl tracking-[0.3em] font-bold'} placeholder="000000" maxLength={6} value={pvOtp}
-                onChange={e => { setPvOtp(e.target.value.replace(/\D/g, '')); setPvError('') }} autoFocus />
-              <button type="button" onClick={() => { setPvSent(false); setPvOtp('') }} className="p-3 bg-white/5 border border-violet-500/20 rounded-xl text-[#7B6A9A] hover:text-violet-400 transition-colors"><RefreshCw size={15} /></button>
-            </div>
-            {pvError && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{pvError}</p>}
-            <button type="submit" disabled={pvBusy || pvOtp.length < 6}
-              className="flex items-center gap-2 px-4 py-2 bg-violet-500/15 border border-violet-500/25 text-violet-400 font-semibold rounded-xl text-[13px] hover:bg-violet-500/25 transition-colors disabled:opacity-60">
-              {pvBusy && <Loader2 size={13} className="animate-spin" />} Verify Phone
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={sendPhoneOtp} className="space-y-3">
-            <div className="flex gap-2">
-              <input className={inputCls} placeholder="+94771234567 (E.164 format)" value={pvPhone} onChange={e => { setPvPhone(e.target.value); setPvError('') }} />
-              <button type="submit" disabled={pvBusy || !pvPhone}
-                className="flex-shrink-0 flex items-center gap-1.5 px-4 py-3 bg-violet-500/15 border border-violet-500/20 text-violet-400 rounded-xl text-[13px] font-semibold hover:bg-violet-500/25 transition-colors disabled:opacity-60">
-                {pvBusy ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />} Send OTP
-              </button>
-            </div>
-            {pvError && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{pvError}</p>}
-          </form>
-        )}
-        {security?.phoneVerified && (
-          <p className="text-[12px] text-emerald-400">Your phone number is verified and can receive OTPs for password recovery.</p>
-        )}
-      </div>
     </div>
   )
 }
@@ -506,7 +434,7 @@ export default function SettingsPage() {
           {active === 'appearance' && <AppearanceSection />}
           {active === 'language' && <LanguageSection />}
           {active === 'password' && <ChangePasswordSection />}
-          {active === 'forgot' && <ForgotPasswordSection security={security} />}
+          {active === 'forgot' && <ForgotPasswordSection />}
           {active === 'verifications' && (
             loadingSec
               ? <div className="flex justify-center py-16"><Loader2 size={24} className="text-violet-400 animate-spin" /></div>
