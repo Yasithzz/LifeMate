@@ -67,7 +67,7 @@ export default function ProfilePage() {
         <form onSubmit={handleSave} className="bg-white/5 border border-violet-500/15 rounded-2xl p-6">
           <h2 className="text-[15px] font-bold text-white mb-5">Lifestyle Preferences</h2>
           <div className="space-y-5">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Bedtime</label>
                 <input type="time" value={form.sleepSchedule} onChange={e => setForm(f => ({ ...f, sleepSchedule: e.target.value }))} className={inputCls} />

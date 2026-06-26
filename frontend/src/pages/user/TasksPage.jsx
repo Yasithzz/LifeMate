@@ -96,7 +96,7 @@ export default function TasksPage() {
             </div>
             <div className="space-y-3">
               <input className={inputCls} placeholder="Task title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} autoFocus />
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <select className={inputCls + ' cursor-pointer'} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
                   {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                 </select>
@@ -104,7 +104,7 @@ export default function TasksPage() {
                   {PRIORITIES.map(p => <option key={p}>{p} Priority</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] uppercase tracking-widest text-[#7B6A9A] font-semibold block mb-1.5">Deadline</label>
                   <input type="date" className={inputCls} value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />

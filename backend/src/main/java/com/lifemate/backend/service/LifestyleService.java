@@ -54,14 +54,20 @@ public class LifestyleService {
         entry.setStressLevel(result.stressLevel());
         entry.setStressIndex(result.stressIndex());
         entry.setPredictionScore(result.legacyScore());
+        entry.setConfidence(result.confidence());
 
         LifestyleEntry saved = lifestyleRepository.save(entry);
 
         // ── Notification (immediate) ────────────────────────────────
+        String emoji = switch (saved.getStressLevel()) {
+            case "Very Low", "Low" -> "😊";
+            case "High", "Very High" -> "😓";
+            default -> "😐";
+        };
         Notification n = new Notification();
         n.setUserEmail(userEmail);
-        n.setMessage("ML Stress Analysis complete — Level: " + saved.getStressLevel()
-                + ". Your personalised weekly schedule has been refreshed!");
+        n.setMessage("Daily check-in saved! " + emoji + " Your stress level today is "
+                + saved.getStressLevel() + ". Your weekly schedule has been updated.");
         n.setType("analysis");
         notificationRepository.save(n);
 
@@ -102,6 +108,6 @@ public class LifestyleService {
         return new LifestyleResponse(
                 e.getId(), e.getMood(), e.getWorkload(), e.getSleepHours(), e.getEnergyLevel(),
                 e.getSocialInteraction(), e.getExerciseDone(), e.getScreenTimeHours(), e.getWaterCups(),
-                e.getStressLevel(), e.getStressIndex(), e.getPredictionScore(), e.getSubmittedAt());
+                e.getStressLevel(), e.getStressIndex(), e.getPredictionScore(), e.getConfidence(), e.getSubmittedAt());
     }
 }

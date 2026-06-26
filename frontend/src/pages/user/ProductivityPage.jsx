@@ -67,7 +67,7 @@ export default function ProductivityPage() {
         </div>
 
         {/* Score hero */}
-        <div className={`mb-6 rounded-2xl p-6 border ${scoreBg} flex items-center gap-6`}>
+        <div className={`mb-6 rounded-2xl p-6 border ${scoreBg} flex flex-col sm:flex-row items-center gap-4 sm:gap-6`}>
           <div className="relative w-24 h-24 flex-shrink-0">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
@@ -85,7 +85,7 @@ export default function ProductivityPage() {
             <p className={`text-3xl font-extrabold ${scoreColor}`}>{score >= 70 ? 'Excellent' : score >= 40 ? 'Good' : 'Needs Work'}</p>
             <p className="text-[13px] text-[#7B6A9A] mt-1">Based on task completion, stress level & hydration from your database</p>
           </div>
-          <div className="ml-auto flex-shrink-0"><Award size={40} className={scoreColor + ' opacity-50'} /></div>
+          <div className="hidden sm:block sm:ml-auto flex-shrink-0"><Award size={40} className={scoreColor + ' opacity-50'} /></div>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -155,7 +155,7 @@ export default function ProductivityPage() {
                 <div className="h-full bg-sky-400 rounded-full" style={{ width: `${Math.min(100, ((wellness?.todayWater ?? 0) / 8) * 100)}%` }} />
               </div>
             </div>
-            <div className="py-4 border-x border-violet-500/10">
+            <div className="py-4 border-t md:border-t-0 md:border-x border-violet-500/10">
               <p className="text-[28px] font-extrabold text-orange-400">{wellness?.workoutHistory?.length ?? 0}</p>
               <p className="text-[12px] text-[#7B6A9A] mt-1">Total workouts logged</p>
               <p className="text-[11px] text-[#6B5E8A] mt-1">{wellness?.workoutHistory?.filter(w => w.recordedAt?.startsWith(today)).length ?? 0} today</p>

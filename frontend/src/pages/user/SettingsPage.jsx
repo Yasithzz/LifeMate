@@ -410,9 +410,20 @@ export default function SettingsPage() {
         <p className="text-[#7B6A9A] text-sm mt-0.5">Manage your preferences and account security</p>
       </div>
 
-      <div className="flex gap-8 items-start">
-        {/* Left sidebar */}
-        <aside className="w-52 flex-shrink-0 sticky top-8">
+      <div className="flex flex-col md:flex-row gap-6 md:gap-8 items-start">
+        {/* Mobile: 2-column grid — all options visible at once */}
+        <div className="md:hidden grid grid-cols-2 gap-2 w-full">
+          {NAV.flatMap(({ items }) => items).map(({ id, label, icon: Icon }) => (
+            <button key={id} onClick={() => setActive(id)}
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 text-left ${active === id ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.15)]' : 'text-[#7B6A9A] bg-white/5 border border-violet-500/10 hover:text-violet-300'}`}>
+              <Icon size={14} className="flex-shrink-0" />
+              <span className="truncate">{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Desktop: left sidebar */}
+        <aside className="hidden md:block w-52 flex-shrink-0 sticky top-8">
           {NAV.map(({ group, items }) => (
             <div key={group} className="mb-6">
               <p className="text-[11px] font-bold uppercase tracking-widest text-[#4A3F6A] px-3 mb-1.5">{group}</p>

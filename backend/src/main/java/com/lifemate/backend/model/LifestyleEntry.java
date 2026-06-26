@@ -31,6 +31,7 @@ public class LifestyleEntry {
     private String stressLevel;   // "Very Low" | "Low" | "Normal" | "High" | "Very High"
     private int stressIndex;       // 0-4
     private int predictionScore;   // legacy 0-100
+    private int confidence;        // model probability % for predicted class (0-100)
 
     private Instant submittedAt = Instant.now();
 }

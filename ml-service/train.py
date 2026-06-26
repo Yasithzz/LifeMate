@@ -33,28 +33,46 @@ def load_data(path=DATA):
     return X, y
 
 
+MIN_SAMPLES_FOR_SMOTE = 30   # need at least 6 samples per class for SMOTE (k_neighbors=5)
+MIN_SAMPLES_FOR_SPLIT = 10   # need enough for a meaningful train/test split
+
+
 def train(X, y):
-    # Balance classes with SMOTE
-    smote = SMOTE(random_state=42)
-    X_res, y_res = smote.fit_resample(X, y)
-    print(f"After SMOTE — samples: {len(X_res)}, class counts: {dict(zip(*np.unique(y_res, return_counts=True)))}")
+    n_total = len(X)
+    class_counts = dict(zip(*np.unique(y, return_counts=True)))
+    min_class = min(class_counts.values())
 
-    X_train, X_test, y_train, y_test = train_test_split(
-        X_res, y_res, test_size=0.2, random_state=42, stratify=y_res)
+    # Apply SMOTE only when each class has enough samples
+    if n_total >= MIN_SAMPLES_FOR_SMOTE and min_class >= 6:
+        smote = SMOTE(random_state=42)
+        X_res, y_res = smote.fit_resample(X, y)
+        print(f"After SMOTE — samples: {len(X_res)}, class counts: {dict(zip(*np.unique(y_res, return_counts=True)))}")
+    else:
+        X_res, y_res = X.values, y.values
+        print(f"SMOTE skipped (only {n_total} samples). Training on raw data.")
 
-    clf = GradientBoostingClassifier(
-        n_estimators=200, max_depth=5, learning_rate=0.1,
-        subsample=0.8, random_state=42)
-    clf.fit(X_train, y_train)
-
-    y_pred = clf.predict(X_test)
-    acc    = accuracy_score(y_test, y_pred)
-    print(f"\nTest accuracy: {acc:.4f}")
-    print(classification_report(y_test, y_pred, target_names=LABELS))
-
-    # 5-fold CV on balanced data
-    cv = cross_val_score(clf, X_res, y_res, cv=5, scoring="accuracy")
-    print(f"5-fold CV: {cv.mean():.4f} ± {cv.std():.4f}")
+    if n_total >= MIN_SAMPLES_FOR_SPLIT:
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_res, y_res, test_size=0.2, random_state=42, stratify=y_res)
+        clf = GradientBoostingClassifier(
+            n_estimators=200, max_depth=5, learning_rate=0.1,
+            subsample=0.8, random_state=42)
+        clf.fit(X_train, y_train)
+        y_pred = clf.predict(X_test)
+        acc    = accuracy_score(y_test, y_pred)
+        print(f"\nTest accuracy: {acc:.4f}")
+        print(classification_report(y_test, y_pred, target_names=LABELS, zero_division=0))
+        cv_folds = min(5, min_class) if min_class >= 2 else 0
+        if cv_folds >= 2:
+            cv = cross_val_score(clf, X_res, y_res, cv=cv_folds, scoring="accuracy")
+            print(f"{cv_folds}-fold CV: {cv.mean():.4f} ± {cv.std():.4f}")
+    else:
+        # Too few samples for split — train on everything
+        clf = GradientBoostingClassifier(
+            n_estimators=100, max_depth=3, learning_rate=0.1, random_state=42)
+        clf.fit(X_res, y_res)
+        acc = accuracy_score(y_res, clf.predict(X_res))
+        print(f"Trained on all {n_total} samples (train=test). Accuracy: {acc:.4f}")
 
     return clf, acc
 

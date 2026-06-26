@@ -10,6 +10,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -28,12 +32,16 @@ public class MlService {
             .connectTimeout(Duration.ofSeconds(1))
             .build();
     private final String mlUrl;
+    private final String datasetPath;
 
-    public MlService(@Value("${ml.service.url:http://localhost:5001}") String mlUrl) {
+    public MlService(
+            @Value("${ml.service.url:http://localhost:5001}") String mlUrl,
+            @Value("${ml.dataset.path:../datasets/stress_dataset.csv}") String datasetPath) {
         this.mlUrl = mlUrl;
+        this.datasetPath = datasetPath;
     }
 
-    public record MlResult(String stressLevel, int stressIndex, int legacyScore) {}
+    public record MlResult(String stressLevel, int stressIndex, int legacyScore, int confidence) {}
 
     public MlResult predict(LifestyleRequest req) {
         try {
@@ -52,8 +60,12 @@ public class MlService {
                 if (mi.find() && ml.find()) {
                     int    idx = Integer.parseInt(mi.group(1));
                     String lbl = ml.group(1);
-                    log.info("ML prediction: {} ({})", lbl, idx);
-                    return new MlResult(lbl, idx, idx * 25);
+                    // Extract probability for the predicted label from probabilities map
+                    Pattern confPat = Pattern.compile("\"" + Pattern.quote(lbl) + "\"\\s*:\\s*(\\d+(?:\\.\\d+)?)");
+                    Matcher mc = confPat.matcher(body);
+                    int confidence = mc.find() ? (int) Math.round(Double.parseDouble(mc.group(1)) * 100) : 50;
+                    log.info("ML prediction: {} ({}) confidence={}%", lbl, idx, confidence);
+                    return new MlResult(lbl, idx, idx * 25, confidence);
                 }
             }
         } catch (Exception e) {
@@ -63,15 +75,24 @@ public class MlService {
     }
 
     /** Heuristic fallback when Python service is not running */
+    /** Heuristic fallback when Python service is not running.
+     *  Weights and thresholds match the Python dataset generator exactly. */
     private MlResult fallback(LifestyleRequest req) {
-        double score =
-            (5 - req.getMood())    * 0.25 +
-            (req.getWorkload()-1)  * 0.22 +
-            Math.max(0, 7.5 - req.getSleepHours()) / 7.5 * 0.20 +
-            (5 - req.getEnergyLevel()) / 4.0 * 0.18 +
-            ((req.getSocialInteraction() != null ? 3 - req.getSocialInteraction() : 0) / 4.0) * 0.06 +
-            (req.getExerciseDone() != null && req.getExerciseDone() == 0 ? 1 : 0) * 0.05 +
-            ((req.getScreenTimeHours() != null ? req.getScreenTimeHours() : 4) / 14.0) * 0.04;
+        double mood     = (5.0 - req.getMood())         / 4.0;   // normalize 1-5 → 0-1
+        double workload = (req.getWorkload() - 1.0)     / 4.0;   // normalize 1-5 → 0-1
+        double sleep    = Math.max(0, 7.5 - req.getSleepHours()) / 7.5;
+        double energy   = (5.0 - req.getEnergyLevel())  / 4.0;
+        double social   = (req.getSocialInteraction() != null ? 3.0 - req.getSocialInteraction() : 0) / 4.0;
+        double exercise = (req.getExerciseDone() != null && req.getExerciseDone() == 0) ? 1.0 : 0.0;
+        double screen   = Math.min(1.0, (req.getScreenTimeHours() != null ? req.getScreenTimeHours() : 4.0) / 10.0);
+
+        double score = mood     * 0.25
+                     + workload * 0.22
+                     + sleep    * 0.20
+                     + energy   * 0.18
+                     + social   * 0.06
+                     + exercise * 0.05
+                     + screen   * 0.04;
 
         int idx;
         if (score < 0.18)      idx = 0;
@@ -80,22 +101,58 @@ public class MlService {
         else if (score < 0.76) idx = 3;
         else                   idx = 4;
 
-        return new MlResult(LABELS.get(idx), idx, idx * 25);
+        // Pseudo-confidence: how far the score is from the nearest decision boundary within its bucket
+        double[] bounds = {0.0, 0.18, 0.36, 0.58, 0.76, 1.0};
+        double lo = bounds[idx], hi = bounds[idx + 1];
+        double pos = (score - lo) / (hi - lo); // 0..1 within bucket
+        double relConf = 1.0 - 2.0 * Math.abs(pos - 0.5); // peaks at center
+        int confidence = 50 + (int) Math.round(relConf * 40); // 50-90%
+
+        log.debug("Fallback heuristic score={} → {} confidence={}%", String.format("%.4f", score), LABELS.get(idx), confidence);
+        return new MlResult(LABELS.get(idx), idx, idx * 25, confidence);
     }
 
-    /** Asynchronously send confirmed data back to ML service for incremental retraining */
+    /** Store confirmed data in the dataset and trigger a model retrain.
+     *  Tries the ML service first; falls back to writing directly to the CSV. */
     public void sendTrainingData(LifestyleRequest req, int confirmedIndex) {
         try {
             String json = buildJson(req, confirmedIndex);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(mlUrl + "/add-data"))
-                    .header("Content-Type","application/json")
+                    .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .timeout(Duration.ofSeconds(3))
+                    .timeout(Duration.ofSeconds(5))
                     .build();
-            http.sendAsync(request, HttpResponse.BodyHandlers.discarding());
+            HttpResponse<String> resp = http.send(request, HttpResponse.BodyHandlers.ofString());
+            log.info("Training data sent to ML service (status {}): {}", resp.statusCode(), resp.body());
         } catch (Exception e) {
-            log.debug("Could not send training data to ML service: {}", e.getMessage());
+            log.warn("ML service unavailable for /add-data ({}). Writing directly to dataset CSV.", e.getMessage());
+            writeDirectlyToCsv(req, confirmedIndex);
+        }
+    }
+
+    private void writeDirectlyToCsv(LifestyleRequest req, int stressIndex) {
+        try {
+            int social = req.getSocialInteraction() != null ? req.getSocialInteraction() : 3;
+            int ex     = req.getExerciseDone()       != null ? req.getExerciseDone()      : 0;
+            double scr = req.getScreenTimeHours()    != null ? req.getScreenTimeHours()   : 4.0;
+            double wat = req.getWaterCups()          != null ? req.getWaterCups()         : 6.0;
+
+            Path csv = Paths.get(datasetPath).toAbsolutePath().normalize();
+            boolean isNew = !Files.exists(csv);
+            if (isNew) {
+                Files.createDirectories(csv.getParent());
+                Files.writeString(csv,
+                    "mood,workload,sleep_hours,energy_level,social_interaction,exercise_done,screen_time_hours,water_cups,stress_level\n",
+                    StandardOpenOption.CREATE);
+            }
+            String row = String.format("%d,%d,%.1f,%d,%d,%d,%.1f,%.1f,%d%n",
+                    req.getMood(), req.getWorkload(), req.getSleepHours(),
+                    req.getEnergyLevel(), social, ex, scr, wat, stressIndex);
+            Files.writeString(csv, row, StandardOpenOption.APPEND);
+            log.info("Training data written directly to {}", csv);
+        } catch (Exception ex) {
+            log.error("Could not write training data to CSV: {}", ex.getMessage());
         }
     }
 
