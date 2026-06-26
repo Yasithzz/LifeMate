@@ -26,7 +26,7 @@ FEATURES = ["mood","workload","sleep_hours","energy_level",
             "social_interaction","exercise_done","screen_time_hours","water_cups"]
 LABELS   = ["Very Low","Low","Normal","High","Very High"]
 
-RETRAIN_BATCH = 20   # retrain after this many new samples have been added
+RETRAIN_BATCH = 1    # retrain after every new confirmed sample
 _new_samples_count = 0
 _model_lock = threading.Lock()
 
@@ -141,14 +141,24 @@ def _do_retrain():
     """Background task: retrain model from dataset."""
     global _clf
     try:
+        if not os.path.exists(DATASET):
+            print("[ML] Retrain skipped — dataset file not found.")
+            return
+        with open(DATASET) as f:
+            row_count = sum(1 for _ in f) - 1  # subtract header
+        if row_count < 2:
+            print(f"[ML] Retrain skipped — only {row_count} sample(s) in dataset.")
+            return
+
         import subprocess, sys
+        print(f"[ML] Retraining on {row_count} samples…")
         result = subprocess.run(
             [sys.executable, os.path.join(BASE, "train.py")],
             capture_output=True, text=True, cwd=BASE)
         if result.returncode == 0:
             with _model_lock:
                 _clf = load_model()
-            print("[ML] Model retrained successfully.")
+            print("[ML] Model retrained and reloaded successfully.")
         else:
             print(f"[ML] Retrain failed:\n{result.stderr}")
     except Exception as e:

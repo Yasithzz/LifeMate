@@ -2,8 +2,10 @@ package com.lifemate.backend.service;
 
 import com.lifemate.backend.dto.SecurityInfoResponse;
 import com.lifemate.backend.exception.ApiException;
+import com.lifemate.backend.model.Notification;
 import com.lifemate.backend.model.OtpEntry;
 import com.lifemate.backend.model.User;
+import com.lifemate.backend.repository.NotificationRepository;
 import com.lifemate.backend.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,15 +19,18 @@ public class SecurityService {
     private final EmailService emailService;
     private final SmsService smsService;
     private final PasswordEncoder passwordEncoder;
+    private final NotificationRepository notificationRepository;
 
     public SecurityService(UserRepository userRepository, OtpService otpService,
                             EmailService emailService, SmsService smsService,
-                            PasswordEncoder passwordEncoder) {
+                            PasswordEncoder passwordEncoder,
+                            NotificationRepository notificationRepository) {
         this.userRepository = userRepository;
         this.otpService = otpService;
         this.emailService = emailService;
         this.smsService = smsService;
         this.passwordEncoder = passwordEncoder;
+        this.notificationRepository = notificationRepository;
     }
 
     public SecurityInfoResponse getInfo(String email) {
@@ -47,6 +52,12 @@ public class SecurityService {
         User user = findUser(email);
         user.setEmailVerified(true);
         userRepository.save(user);
+
+        Notification n = new Notification();
+        n.setUserEmail(email);
+        n.setMessage("Your email address has been verified successfully. ✓ Your account is now more secure.");
+        n.setType("achievement");
+        notificationRepository.save(n);
     }
 
     // ---------- Phone verification ----------

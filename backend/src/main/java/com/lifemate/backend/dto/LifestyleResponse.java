@@ -15,5 +15,6 @@ public record LifestyleResponse(
         String stressLevel,
         int stressIndex,
         int predictionScore,
+        int confidence,
         Instant submittedAt
 ) {}

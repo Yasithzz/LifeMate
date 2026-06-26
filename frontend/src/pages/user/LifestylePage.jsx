@@ -46,10 +46,10 @@ const MONTH_NAMES = ['January','February','March','April','May','June',
 /* ─── sub-components ────────────────────────────────────────────── */
 function ScaleSelector({ value, onChange, labels }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-1.5 overflow-x-auto pb-0.5">
       {labels.map((label, i) => (
         <button key={i} type="button" onClick={() => onChange(i + 1)}
-          className={`flex-1 py-2 rounded-xl text-[12px] font-medium transition-all duration-200 ${
+          className={`flex-shrink-0 flex-1 min-w-[52px] py-2 rounded-xl text-[10px] sm:text-[12px] font-medium whitespace-nowrap transition-all duration-200 ${
             value === i + 1
               ? 'bg-violet-600/30 border border-violet-500/50 text-violet-300'
               : 'bg-white/5 border border-violet-500/10 text-[#7B6A9A] hover:border-violet-500/30 hover:text-violet-300'
@@ -297,11 +297,6 @@ export default function LifestylePage() {
                 <p className="text-[11px] opacity-70 uppercase tracking-widest font-semibold">Stress Level</p>
                 <p className="text-2xl font-extrabold mt-0.5">{result.stressLevel}</p>
               </div>
-              <div className="h-10 w-px bg-current opacity-20"/>
-              <div>
-                <p className="text-[11px] opacity-70 uppercase tracking-widest font-semibold">Confidence</p>
-                <p className="text-2xl font-extrabold mt-0.5">{100 - (result.stressIndex * 15)}%</p>
-              </div>
               <div className="ml-auto w-16 h-16 rounded-full border-4 border-current/30 flex items-center justify-center">
                 <span className="text-lg font-extrabold">{result.stressIndex}</span>
               </div>
@@ -325,12 +320,12 @@ export default function LifestylePage() {
             {/* Mood */}
             <div>
               <label className="block text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] mb-3">How are you feeling?</label>
-              <div className="flex gap-3">
+              <div className="flex gap-1.5 sm:gap-3">
                 {MOODS.map(({emoji,label,value}) => (
                   <button key={value} type="button" onClick={() => setForm(f=>({...f,mood:value}))}
-                    className={`flex-1 flex flex-col items-center py-3 rounded-xl transition-all duration-200 ${form.mood===value?'bg-violet-600/25 border border-violet-500/50 scale-105':'bg-white/5 border border-violet-500/10 hover:border-violet-500/30'}`}>
-                    <span className="text-xl mb-1">{emoji}</span>
-                    <span className="text-[10px] text-[#7B6A9A]">{label}</span>
+                    className={`flex-1 flex flex-col items-center py-2 sm:py-3 rounded-xl transition-all duration-200 ${form.mood===value?'bg-violet-600/25 border border-violet-500/50 scale-105':'bg-white/5 border border-violet-500/10 hover:border-violet-500/30'}`}>
+                    <span className="text-lg sm:text-xl mb-1">{emoji}</span>
+                    <span className="text-[9px] sm:text-[10px] text-[#7B6A9A]">{label}</span>
                   </button>
                 ))}
               </div>
@@ -383,8 +378,8 @@ export default function LifestylePage() {
               <ScaleSelector value={form.socialInteraction} onChange={v=>setForm(f=>({...f,socialInteraction:v}))} labels={SOCIAL}/>
             </div>
 
-            {/* Exercise + Screen time + Water (3-column) */}
-            <div className="grid grid-cols-3 gap-4">
+            {/* Exercise + Screen time + Water */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Exercise */}
               <div>
                 <label className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] mb-2">
