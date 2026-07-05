@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Mail, Phone, ArrowLeft, CheckCircle, Loader2, Eye, EyeOff, RefreshCw } from 'lucide-react'
+import { Sparkles, ArrowLeft, CheckCircle, Loader2, Eye, EyeOff, RefreshCw } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { forgotPasswordInitiate, forgotPasswordReset } from '../lib/api'
 
@@ -23,26 +23,28 @@ function PasswordInput({ placeholder, value, onChange }) {
 }
 
 export default function ForgotPasswordPage() {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  document.documentElement.removeAttribute('data-accent')
+
   const navigate = useNavigate()
-  const [step, setStep] = useState(0)
-  const [email, setEmail] = useState('')
-  const [method, setMethod] = useState('email')
-  const [otp, setOtp] = useState('')
-  const [newPassword, setNewPassword] = useState('')
+  const [step, setStep]                   = useState(0)
+  const [email, setEmail]                 = useState('')
+  const [otp, setOtp]                     = useState('')
+  const [newPassword, setNewPassword]     = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [resending, setResending] = useState(false)
-  const [error, setError] = useState('')
+  const [loading, setLoading]             = useState(false)
+  const [resending, setResending]         = useState(false)
+  const [error, setError]                 = useState('')
 
   const handleInitiate = async (e) => {
     e.preventDefault(); setError(''); setLoading(true)
-    try { await forgotPasswordInitiate(email, method); setStep(1) }
+    try { await forgotPasswordInitiate(email, 'email'); setStep(1) }
     catch (err) { setError(err.message) } finally { setLoading(false) }
   }
 
   const handleResend = async () => {
     setResending(true)
-    try { await forgotPasswordInitiate(email, method) } catch { /* resend errors are non-critical */ }
+    try { await forgotPasswordInitiate(email, 'email') } catch { /* non-critical */ }
     finally { setResending(false) }
   }
 
@@ -63,12 +65,14 @@ export default function ForgotPasswordPage() {
 
       <div className="flex-1 flex items-center justify-center px-6 py-28 relative z-10">
         <div className="w-full max-w-[420px] bg-[#0F0828]/80 backdrop-blur-3xl border border-violet-500/18 rounded-3xl p-10 shadow-[0_24px_80px_rgba(0,0,0,0.6)]">
+
+          {/* Logo */}
           <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-            <span className="text-2xl bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">✦</span>
-            <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">LifeMate</span>
+            <Sparkles size={16} className="text-violet-400" />
+            <span className="text-[15px] font-bold text-white tracking-tight">LifeMate</span>
           </Link>
 
-          {/* Step 0 — email + method */}
+          {/* Step 0 — enter email */}
           {step === 0 && (
             <>
               <h1 className="text-[24px] font-extrabold text-white text-center mb-1 tracking-tight">Forgot Password?</h1>
@@ -76,24 +80,6 @@ export default function ForgotPasswordPage() {
               <form onSubmit={handleInitiate} className="flex flex-col gap-4">
                 <input type="email" className={inputCls} placeholder="you@example.com" required value={email}
                   onChange={e => { setEmail(e.target.value); setError('') }} />
-
-                {email && (
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-[#7B6A9A] mb-2">Send OTP via</p>
-                    <div className="flex gap-2">
-                      {[{ v: 'email', icon: Mail, label: 'Email' }, { v: 'phone', icon: Phone, label: 'Phone' }].map(({ v, icon: Icon, label }) => (
-                        <button key={v} type="button" onClick={() => setMethod(v)}
-                          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-semibold border transition-all duration-200 ${method === v ? 'bg-violet-600/25 border-violet-500/50 text-violet-300' : 'bg-white/5 border-violet-500/15 text-[#7B6A9A] hover:border-violet-500/30 hover:text-violet-300'}`}>
-                          <Icon size={14} /> {label}
-                        </button>
-                      ))}
-                    </div>
-                    {method === 'phone' && (
-                      <p className="text-[11px] text-[#6B5E8A] mt-1.5">Phone OTP requires a verified phone number in Settings.</p>
-                    )}
-                  </div>
-                )}
-
                 {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
                 <button type="submit" disabled={loading}
                   className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold text-[16px] py-3.5 rounded-xl shadow-[0_4px_20px_rgba(124,58,237,0.4)] hover:shadow-[0_8px_32px_rgba(124,58,237,0.6)] hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60 disabled:hover:translate-y-0">
@@ -111,9 +97,7 @@ export default function ForgotPasswordPage() {
                 <ArrowLeft size={15} /> Back
               </button>
               <h1 className="text-[24px] font-extrabold text-white text-center mb-1 tracking-tight">Enter OTP</h1>
-              <p className="text-[#9F8BC7] text-sm text-center mb-1">
-                A 6-digit code was sent to your {method === 'phone' ? 'verified phone number' : 'email address'}
-              </p>
+              <p className="text-[#9F8BC7] text-sm text-center mb-1">A 6-digit code was sent to your email address</p>
               <p className="text-violet-400 text-sm text-center font-medium mb-8">{email}</p>
 
               <form onSubmit={handleReset} className="flex flex-col gap-4">
@@ -131,7 +115,6 @@ export default function ForgotPasswordPage() {
                   </div>
                   <p className="text-[11px] text-[#6B5E8A] mt-1.5">Expires in 10 minutes · Click <RefreshCw size={11} className="inline" /> to resend</p>
                 </div>
-
                 <div>
                   <label className="text-[11px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">New Password</label>
                   <PasswordInput placeholder="Min. 6 characters" value={newPassword} onChange={e => { setNewPassword(e.target.value); setError('') }} />
@@ -140,7 +123,6 @@ export default function ForgotPasswordPage() {
                   <label className="text-[11px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Confirm Password</label>
                   <PasswordInput placeholder="Repeat new password" value={confirmPassword} onChange={e => { setConfirmPassword(e.target.value); setError('') }} />
                 </div>
-
                 {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">{error}</p>}
                 <button type="submit" disabled={loading || otp.length < 6}
                   className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold text-[16px] py-3.5 rounded-xl shadow-[0_4px_20px_rgba(124,58,237,0.4)] hover:shadow-[0_8px_32px_rgba(124,58,237,0.6)] hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60 disabled:hover:translate-y-0">

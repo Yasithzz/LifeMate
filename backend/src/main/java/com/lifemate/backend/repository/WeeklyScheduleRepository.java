@@ -12,4 +12,5 @@ public interface WeeklyScheduleRepository extends MongoRepository<WeeklySchedule
     // Bulk delete — removes ALL duplicates atomically
     void deleteAllByUserEmailAndWeekStartDate(String userEmail, String weekStartDate);
     Optional<WeeklySchedule> findTopByUserEmailOrderByGeneratedAtDesc(String userEmail);
+    void deleteByUserEmail(String userEmail);
 }

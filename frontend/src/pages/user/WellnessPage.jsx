@@ -158,7 +158,9 @@ export default function WellnessPage() {
                   <div key={w.id} className="flex items-center justify-between py-1.5 border-b border-violet-500/8 last:border-0">
                     <span className="text-[12px] text-[#9F8BC7]">{w.amount} cup{w.amount > 1 ? 's' : ''}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-[#6B5E8A]">{new Date(w.recordedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span className="text-[11px] text-[#6B5E8A]">
+                        {new Date(w.recordedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {new Date(w.recordedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                       <button onClick={() => handleDeleteWater(w.id)} className="p-1 text-[#4A3F6A] hover:text-red-400 transition-colors"><Trash2 size={12} /></button>
                     </div>
                   </div>
@@ -243,23 +245,45 @@ export default function WellnessPage() {
               </div>
             </div>
 
-            {/* All workout history */}
-            {data.workoutHistory.length > 0 && (
-              <div className="bg-white/5 border border-violet-500/15 rounded-2xl p-6">
-                <h2 className="text-[15px] font-bold text-white mb-4">All Workout History</h2>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {data.workoutHistory.map(w => (
-                    <div key={w.id} className="flex items-center justify-between py-2 border-b border-violet-500/8 last:border-0">
-                      <div>
-                        <p className="text-[13px] text-white font-medium">{w.workoutType}</p>
-                        <p className="text-[11px] text-[#7B6A9A]">{new Date(w.recordedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {w.durationMinutes} mins</p>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* All water history */}
+              {data.waterHistory.length > 0 && (
+                <div className="bg-white/5 border border-violet-500/15 rounded-2xl p-6">
+                  <h2 className="text-[15px] font-bold text-white mb-4">All Water Intake History</h2>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {data.waterHistory.map(w => (
+                      <div key={w.id} className="flex items-center justify-between py-2 border-b border-violet-500/8 last:border-0">
+                        <div>
+                          <p className="text-[13px] text-white font-medium">{w.amount} cup{w.amount > 1 ? 's' : ''}</p>
+                          <p className="text-[11px] text-[#7B6A9A]">
+                            {new Date(w.recordedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {new Date(w.recordedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        <button onClick={() => handleDeleteWater(w.id)} className="p-1 text-[#4A3F6A] hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
                       </div>
-                      <button onClick={() => handleDeleteWorkout(w.id)} className="p-1 text-[#4A3F6A] hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+
+              {/* All workout history */}
+              {data.workoutHistory.length > 0 && (
+                <div className="bg-white/5 border border-violet-500/15 rounded-2xl p-6">
+                  <h2 className="text-[15px] font-bold text-white mb-4">All Workout History</h2>
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {data.workoutHistory.map(w => (
+                      <div key={w.id} className="flex items-center justify-between py-2 border-b border-violet-500/8 last:border-0">
+                        <div>
+                          <p className="text-[13px] text-white font-medium">{w.workoutType}</p>
+                          <p className="text-[11px] text-[#7B6A9A]">{new Date(w.recordedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {w.durationMinutes} mins</p>
+                        </div>
+                        <button onClick={() => handleDeleteWorkout(w.id)} className="p-1 text-[#4A3F6A] hover:text-red-400 transition-colors"><Trash2 size={14} /></button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>

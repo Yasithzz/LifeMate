@@ -11,4 +11,5 @@ public interface LifestyleRepository extends MongoRepository<LifestyleEntry, Str
     List<LifestyleEntry> findByUserEmailOrderBySubmittedAtDesc(String userEmail);
     Optional<LifestyleEntry> findTopByUserEmailOrderBySubmittedAtDesc(String userEmail);
     Optional<LifestyleEntry> findTopByUserEmailAndSubmittedAtBetweenOrderBySubmittedAtDesc(String userEmail, Instant from, Instant to);
+    void deleteByUserEmail(String userEmail);
 }

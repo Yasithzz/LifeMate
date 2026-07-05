@@ -46,4 +46,11 @@ public class User {
     private boolean emailVerified = false;
     private String phoneNumber;
     private boolean phoneVerified = false;
+
+    // Avatar (base64-encoded image, max ~500 KB)
+    private String avatarBase64;
+
+    // Engagement tracking
+    private Instant lastLoginAt;
+    private int loginCount = 0;
 }

@@ -9,4 +9,5 @@ import java.util.List;
 public interface WaterIntakeRepository extends MongoRepository<WaterIntake, String> {
     List<WaterIntake> findByUserEmailAndRecordedAtBetweenOrderByRecordedAtDesc(String userEmail, Instant from, Instant to);
     List<WaterIntake> findByUserEmailOrderByRecordedAtDesc(String userEmail);
+    void deleteByUserEmail(String userEmail);
 }

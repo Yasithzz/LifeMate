@@ -1,19 +1,35 @@
 const API_BASE_URL = '/api'
 const SESSION_KEY = 'lifemate_session'
 
+const CONNECT_RETRIES = 8
+const CONNECT_RETRY_DELAYS = [250, 500, 750, 1000, 1500, 2000, 3000, 4000] // ~13s total
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+
 async function request(path, options = {}) {
   const token = getToken()
   let res
-  try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      ...options,
-    })
-  } catch {
-    throw new Error('Cannot connect to server. Make sure the backend is running (./mvnw spring-boot:run from the backend folder).')
+  for (let attempt = 0; ; attempt++) {
+    try {
+      res = await fetch(`${API_BASE_URL}${path}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        ...options,
+      })
+      // Vite's dev proxy returns its own 503 (instead of a rejected fetch) when the backend port refuses the connection
+      if (res.status === 503) {
+        const proxyBody = await res.clone().json().catch(() => null)
+        if (proxyBody?.message?.startsWith('Cannot connect to server')) throw new Error('proxy-down')
+      }
+      break
+    } catch {
+      if (attempt >= CONNECT_RETRIES - 1) {
+        throw new Error('Cannot connect to server. Make sure the backend is running (./mvnw spring-boot:run from the backend folder).')
+      }
+      await sleep(CONNECT_RETRY_DELAYS[attempt])
+    }
   }
 
   if (res.status === 204) return null
@@ -35,11 +51,12 @@ export function registerUser({ fullName, email, password }) {
   })
 }
 
-export function loginUser({ email, password }) {
-  return request('/auth/login', {
+export async function loginUser({ email, password }) {
+  const data = await request('/auth/login', {
     method: 'POST',
     body: JSON.stringify({ email, password }),
-  }).then(saveSession)
+  })
+  return saveSession(data)
 }
 
 export function getCurrentUser() {
@@ -147,6 +164,26 @@ export function forgotPasswordReset(email, otp, newPassword) {
   return request('/auth/forgot-password/reset', { method: 'POST', body: JSON.stringify({ email, otp, newPassword }) })
 }
 
+// Admin
+export function adminGetUsers() { return request('/admin/users') }
+export function adminDeleteUser(id) { return request(`/admin/users/${id}`, { method: 'DELETE' }) }
+export function adminGetBestEngaged() { return request('/admin/users/best-engaged') }
+export function adminGetInactiveUsers(days = 30) { return request(`/admin/users/inactive?days=${days}`) }
+export function adminGetStats() { return request('/admin/stats') }
+export function adminGetFeedbacks() { return request('/admin/feedbacks') }
+export function adminDeleteFeedback(id) { return request(`/admin/feedbacks/${id}`, { method: 'DELETE' }) }
+
+// Account self-deletion
+export function deleteMyAccount() { return request('/users/me', { method: 'DELETE' }) }
+
+// Feedback
+export function getPublicFeedbacks() { return request('/feedback/public') }
+export function getMyFeedback() { return request('/feedback/mine') }
+export function submitFeedback(message, rating) {
+  return request('/feedback', { method: 'POST', body: JSON.stringify({ message, rating }) })
+}
+export function deleteMyFeedback() { return request('/feedback/mine', { method: 'DELETE' }) }
+
 // Notifications
 export function getNotifications() { return request('/notifications') }
 export function getUnreadCount() { return request('/notifications/unread-count') }
@@ -177,4 +214,9 @@ export function getRole() {
 
 export function clearSession() {
   localStorage.removeItem(SESSION_KEY)
+}
+
+export function patchSession(fields) {
+  const session = getSession()
+  if (session) localStorage.setItem(SESSION_KEY, JSON.stringify({ ...session, ...fields }))
 }

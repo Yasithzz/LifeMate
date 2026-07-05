@@ -74,9 +74,7 @@ public class MlService {
         return fallback(req);
     }
 
-    /** Heuristic fallback when Python service is not running */
-    /** Heuristic fallback when Python service is not running.
-     *  Weights and thresholds match the Python dataset generator exactly. */
+    
     private MlResult fallback(LifestyleRequest req) {
         double mood     = (5.0 - req.getMood())         / 4.0;   // normalize 1-5 → 0-1
         double workload = (req.getWorkload() - 1.0)     / 4.0;   // normalize 1-5 → 0-1
@@ -96,6 +94,7 @@ public class MlService {
 
         int idx;
         if (score < 0.18)      idx = 0;
+
         else if (score < 0.36) idx = 1;
         else if (score < 0.58) idx = 2;
         else if (score < 0.76) idx = 3;
@@ -112,8 +111,8 @@ public class MlService {
         return new MlResult(LABELS.get(idx), idx, idx * 25, confidence);
     }
 
-    /** Store confirmed data in the dataset and trigger a model retrain.
-     *  Tries the ML service first; falls back to writing directly to the CSV. */
+   
+    
     public void sendTrainingData(LifestyleRequest req, int confirmedIndex) {
         try {
             String json = buildJson(req, confirmedIndex);

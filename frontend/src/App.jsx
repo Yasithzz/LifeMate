@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
@@ -16,25 +15,18 @@ import NotificationsPage from './pages/user/NotificationsPage'
 import ProfilePage from './pages/user/ProfilePage'
 import UserSettingsPage from './pages/user/SettingsPage'
 import ProductivityPage from './pages/user/ProductivityPage'
+import FeedbackPage from './pages/user/FeedbackPage'
 
 // Admin pages
 import AdminDashboard from './pages/admin/DashboardHome'
 import UsersPage from './pages/admin/UsersPage'
 import AdminSettingsPage from './pages/admin/SettingsPage'
+import AdminFeedbacksPage from './pages/admin/FeedbacksPage'
 
 const U = ({ children }) => <ProtectedRoute requiredRole="USER">{children}</ProtectedRoute>
 const A = ({ children }) => <ProtectedRoute requiredRole="ADMIN">{children}</ProtectedRoute>
 
 function App() {
-  useEffect(() => {
-    const accent = localStorage.getItem('lm_accent') || 'violet'
-    if (accent !== 'violet') {
-      document.documentElement.setAttribute('data-accent', accent)
-    } else {
-      document.documentElement.removeAttribute('data-accent')
-    }
-  }, [])
-
   return (
     <BrowserRouter>
       <Routes>
@@ -54,11 +46,13 @@ function App() {
         <Route path="/dashboard/profile" element={<U><ProfilePage /></U>} />
         <Route path="/dashboard/settings" element={<U><UserSettingsPage /></U>} />
         <Route path="/dashboard/productivity" element={<U><ProductivityPage /></U>} />
+        <Route path="/dashboard/feedback" element={<U><FeedbackPage /></U>} />
 
         {/* Admin dashboard */}
         <Route path="/admin" element={<A><AdminDashboard /></A>} />
         <Route path="/admin/users" element={<A><UsersPage /></A>} />
         <Route path="/admin/settings" element={<A><AdminSettingsPage /></A>} />
+        <Route path="/admin/feedbacks" element={<A><AdminFeedbacksPage /></A>} />
       </Routes>
     </BrowserRouter>
   )

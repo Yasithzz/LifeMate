@@ -24,6 +24,7 @@ public class Task {
     private String priority = "Medium";
     private String status = "Pending";
     private String deadline;
+    private String deadlineTime;
     private Integer durationMinutes;
 
     private Instant createdAt = Instant.now();

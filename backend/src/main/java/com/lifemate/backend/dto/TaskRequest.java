@@ -15,5 +15,6 @@ public class TaskRequest {
     private String priority = "Medium";
     private String status = "Pending";
     private String deadline;
+    private String deadlineTime;
     private Integer durationMinutes;
 }

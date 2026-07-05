@@ -12,6 +12,9 @@ function passwordStrength(pw) {
 }
 
 export default function SignupPage() {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  document.documentElement.removeAttribute('data-accent')
+
   const [form, setForm] = useState({
     fullName: '', email: '', password: '', confirmPassword: '', terms: false,
   })

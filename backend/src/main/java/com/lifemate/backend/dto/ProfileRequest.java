@@ -8,6 +8,8 @@ import java.util.List;
 @Getter
 @Setter
 public class ProfileRequest {
+    private String fullName;
+    private String avatarBase64;
     private String sleepSchedule;
     private String wakeTime;
     private String workHours;

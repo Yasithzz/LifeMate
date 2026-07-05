@@ -1,110 +1,178 @@
-import { useState } from 'react'
-import { Users, ShieldCheck, Activity, TrendingUp, ArrowRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowRight, Star, AlertCircle, RefreshCw, Trash2 } from 'lucide-react'
 import AdminLayout from '../../components/AdminLayout'
+import { adminGetStats, adminGetBestEngaged, adminGetInactiveUsers, adminDeleteUser } from '../../lib/api'
+import { fmtDateLong, fmtDateShort } from '../../lib/locale'
+
+function EngagementBar({ count, max }) {
+  const pct = max > 0 ? Math.round((count / max) * 100) : 0
+  return (
+    <div className="flex items-center gap-2 mt-1">
+      <div className="flex-1 h-1.5 rounded-full bg-white/10">
+        <div className="h-full rounded-full bg-gradient-to-r from-violet-600 to-pink-500 transition-all" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-[11px] text-[#7B6A9A] w-8 text-right">{count}</span>
+    </div>
+  )
+}
 
 export default function AdminDashboard() {
-  const [stats] = useState({
-    totalUsers: 3,
-    activeToday: 1,
-    newThisWeek: 2,
-    systemStatus: 'Healthy',
-  })
+  const [stats, setStats] = useState({ totalUsers: 0, activeToday: 0, newThisWeek: 0, inactiveCount: 0 })
+  const [bestEngaged, setBestEngaged] = useState([])
+  const [inactive, setInactive] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState(null)
 
-  const recentUsers = [
-    { name: 'Browser Test', email: 'browsertest@example.com', role: 'USER', joined: 'Jun 18, 2026' },
-    { name: 'Test User', email: 'testuser@example.com', role: 'USER', joined: 'Jun 16, 2026' },
-    { name: 'Admin', email: 'admin@lifemate.com', role: 'ADMIN', joined: 'Jun 16, 2026' },
-  ]
+  const load = async () => {
+    setLoading(true)
+    try {
+      const [s, eng, inact] = await Promise.all([
+        adminGetStats(),
+        adminGetBestEngaged(),
+        adminGetInactiveUsers(30),
+      ])
+      setStats(s)
+      setBestEngaged(eng)
+      setInactive(inact)
+    } catch {
+      // silently ignore — backend may be starting
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const handleDeleteInactive = async (user) => {
+    if (!window.confirm(`Delete account for ${user.fullName} (${user.email})? This cannot be undone.`)) return
+    setDeletingId(user.id)
+    try {
+      await adminDeleteUser(user.id)
+      setInactive(prev => prev.filter(u => u.id !== user.id))
+      setStats(prev => ({ ...prev, totalUsers: Math.max(0, prev.totalUsers - 1), inactiveCount: Math.max(0, prev.inactiveCount - 1) }))
+    } catch {
+      // ignore
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const maxLogins = bestEngaged.reduce((m, u) => Math.max(m, u.loginCount), 0)
 
   return (
     <AdminLayout>
-      <div className="mb-8">
-        <h1 className="text-[26px] font-extrabold text-white tracking-tight">Admin Dashboard</h1>
-        <p className="text-[#7B6A9A] text-sm mt-1">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}</p>
+      {/* Header */}
+      <div className="flex items-baseline justify-between mb-10">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#3A3060] mb-2">
+            {fmtDateLong(new Date())}
+          </p>
+          <h1 className="text-[36px] font-black text-white leading-none tracking-tight">System Overview</h1>
+        </div>
+        <button onClick={load} className="text-[#3A3060] hover:text-violet-400 transition-colors">
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+        </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* Stats strip */}
+      <div className="flex gap-0 mb-10 rounded-2xl overflow-hidden border border-white/[0.06] bg-white/[0.02]">
         {[
-          { label: 'Total Users', value: stats.totalUsers, icon: Users, color: 'text-violet-400', bg: 'bg-violet-500/10 border-violet-500/20' },
-          { label: 'Active Today', value: stats.activeToday, icon: Activity, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-          { label: 'New This Week', value: stats.newThisWeek, icon: TrendingUp, color: 'text-sky-400', bg: 'bg-sky-500/10 border-sky-500/20' },
-          { label: 'System Status', value: stats.systemStatus, icon: ShieldCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-        ].map(({ label, value, icon: Icon, color, bg }) => (
-          <div key={label} className={`rounded-2xl p-5 border ${bg}`}>
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A]">{label}</span>
-              <Icon size={16} className={color} />
-            </div>
-            <p className={`text-2xl font-extrabold ${color}`}>{value}</p>
+          { label: 'Total users',   value: stats.totalUsers,   accent: 'text-white' },
+          { label: 'Active today',  value: stats.activeToday,  accent: 'text-emerald-300' },
+          { label: 'New this week', value: stats.newThisWeek,  accent: 'text-violet-300' },
+          { label: 'Inactive 30d',  value: stats.inactiveCount, accent: stats.inactiveCount > 0 ? 'text-amber-300' : 'text-white' },
+        ].map((s, i) => (
+          <div key={s.label} className={`flex-1 px-5 py-5 ${i < 3 ? 'border-r border-white/[0.05]' : ''}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#3A3060] mb-2">{s.label}</p>
+            <p className={`text-[28px] font-black leading-none ${s.accent}`}>{loading ? '—' : s.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Recent users */}
-      <div className="bg-white/5 border border-violet-500/15 rounded-2xl p-6 mb-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-[15px] font-bold text-white">Recent Users</h2>
-          <a href="/admin/users" className="text-[12px] text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors">
-            View all <ArrowRight size={13} />
-          </a>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-[11px] uppercase tracking-widest text-[#6B5E8A] border-b border-violet-500/10">
-                <th className="text-left pb-3 font-semibold">Name</th>
-                <th className="text-left pb-3 font-semibold">Email</th>
-                <th className="text-left pb-3 font-semibold">Role</th>
-                <th className="text-left pb-3 font-semibold">Joined</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-violet-500/8">
-              {recentUsers.map((u, i) => (
-                <tr key={i} className="hover:bg-white/3 transition-colors">
-                  <td className="py-3 pr-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
-                        {u.name[0]}
-                      </div>
-                      <span className="text-[13px] text-white font-medium">{u.name}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 pr-4 text-[13px] text-[#9F8BC7]">{u.email}</td>
-                  <td className="py-3 pr-4">
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
-                      u.role === 'ADMIN'
-                        ? 'text-violet-400 bg-violet-500/10 border-violet-500/20'
-                        : 'text-sky-400 bg-sky-500/10 border-sky-500/20'
-                    }`}>{u.role}</span>
-                  </td>
-                  <td className="py-3 text-[13px] text-[#6B5E8A]">{u.joined}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* System info */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[
-          { title: 'Backend', items: [['Framework', 'Spring Boot 4.1'], ['Database', 'MongoDB Atlas'], ['Status', '● Running'], ['Port', '8080']] },
-          { title: 'Frontend', items: [['Framework', 'React 19 + Vite 8'], ['Styling', 'Tailwind CSS v4'], ['Auth', 'JWT Bearer Token'], ['Port', '5173']] },
-        ].map(({ title, items }) => (
-          <div key={title} className="bg-white/5 border border-violet-500/15 rounded-2xl p-5">
-            <h3 className="text-[13px] font-bold text-white mb-4">{title}</h3>
-            <div className="space-y-2">
-              {items.map(([k, v]) => (
-                <div key={k} className="flex justify-between text-[12px]">
-                  <span className="text-[#6B5E8A]">{k}</span>
-                  <span className={`font-medium ${v.startsWith('●') ? 'text-emerald-400' : 'text-[#C4B5D9]'}`}>{v}</span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        {/* Best Engaged Users */}
+        <div className="bg-white/5 border border-violet-500/15 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2.5">
+              <Star size={16} className="text-amber-400" />
+              <h2 className="text-[15px] font-bold text-white">Most Engaged Users</h2>
+            </div>
+            <a href="/admin/users" className="text-[12px] text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors">
+              View all <ArrowRight size={13} />
+            </a>
+          </div>
+          {loading ? (
+            <div className="flex justify-center py-8"><RefreshCw size={18} className="text-violet-400 animate-spin" /></div>
+          ) : bestEngaged.length === 0 ? (
+            <p className="text-center text-[13px] text-[#4A3F6A] py-6">No engagement data yet</p>
+          ) : (
+            <div className="space-y-4">
+              {bestEngaged.map((u, i) => (
+                <div key={u.id} className="flex items-center gap-3">
+                  <span className={`w-5 text-[12px] font-bold text-center ${i === 0 ? 'text-amber-400' : i === 1 ? 'text-[#9F8BC7]' : 'text-[#4A3F6A]'}`}>#{i + 1}</span>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0">
+                    {u.fullName?.[0]?.toUpperCase() ?? '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-white truncate">{u.fullName}</p>
+                    <EngagementBar count={u.loginCount} max={maxLogins} />
+                  </div>
                 </div>
               ))}
             </div>
+          )}
+        </div>
+
+        {/* Inactive Users */}
+        <div className="bg-white/5 border border-amber-500/15 rounded-2xl p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle size={16} className="text-amber-400" />
+              <h2 className="text-[15px] font-bold text-white">Inactive for 30+ Days</h2>
+            </div>
+            <a href="/admin/users" className="text-[12px] text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors">
+              View all <ArrowRight size={13} />
+            </a>
           </div>
-        ))}
+          {loading ? (
+            <div className="flex justify-center py-8"><RefreshCw size={18} className="text-violet-400 animate-spin" /></div>
+          ) : inactive.length === 0 ? (
+            <p className="text-center text-[13px] text-[#4A3F6A] py-6">No inactive users</p>
+          ) : (
+            <div className="space-y-3">
+              {inactive.slice(0, 5).map(u => (
+                <div key={u.id} className="flex items-center gap-3 p-2 rounded-xl hover:bg-white/5 transition-colors">
+                  <div className="w-8 h-8 rounded-full bg-amber-500/15 border border-amber-500/20 flex items-center justify-center text-amber-400 text-[11px] font-bold flex-shrink-0">
+                    {u.fullName?.[0]?.toUpperCase() ?? '?'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold text-white truncate">{u.fullName}</p>
+                    <p className="text-[11px] text-[#6B5E8A]">
+                      {u.lastLoginAt
+                        ? `Last seen ${fmtDateShort(u.lastLoginAt)}`
+                        : 'Never logged in'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteInactive(u)}
+                    disabled={deletingId === u.id}
+                    className="p-1.5 rounded-lg text-[#4A3F6A] hover:text-red-400 hover:bg-red-500/10 transition-all flex-shrink-0"
+                    title="Delete account"
+                  >
+                    {deletingId === u.id
+                      ? <RefreshCw size={13} className="animate-spin" />
+                      : <Trash2 size={13} />}
+                  </button>
+                </div>
+              ))}
+              {inactive.length > 5 && (
+                <p className="text-[12px] text-[#4A3F6A] text-center pt-1">+{inactive.length - 5} more inactive users</p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
     </AdminLayout>
   )
 }

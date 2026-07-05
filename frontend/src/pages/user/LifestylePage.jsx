@@ -66,6 +66,7 @@ function HolidayCalendar({ holidays, onAdd, onRemove, scheduleRefreshing, onRefr
   const [viewM, setViewM] = useState(today.getMonth())
 
   const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+  const todayStr = fmt(today)
 
   const daysInMonth = new Date(viewY, viewM+1, 0).getDate()
   const firstDay    = new Date(viewY, viewM, 1).getDay()
@@ -74,6 +75,7 @@ function HolidayCalendar({ holidays, onAdd, onRemove, scheduleRefreshing, onRefr
 
   // Instant toggle: unmarked → LEAVE → HOLIDAY → removed
   const handleClick = (dateStr) => {
+    if (dateStr < todayStr) return   // past days can't be marked as leave/holiday
     const current = typeOf(dateStr)
     if (!current) {
       onAdd(dateStr, 'LEAVE')       // mark as Leave instantly
@@ -137,17 +139,21 @@ function HolidayCalendar({ holidays, onAdd, onRemove, scheduleRefreshing, onRefr
           const dateStr = `${viewY}-${String(viewM+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
           const isHoliday = holidaySet.has(dateStr)
           const type = typeOf(dateStr)
-          const isToday = fmt(today) === dateStr
+          const isToday = todayStr === dateStr
+          const isPast = dateStr < todayStr
           return (
-            <button key={day} onClick={() => handleClick(dateStr)}
+            <button key={day} onClick={() => handleClick(dateStr)} disabled={isPast}
+              title={isPast ? (isHoliday ? undefined : 'Past dates cannot be marked as leave or holiday') : undefined}
               className={`aspect-square flex items-center justify-center rounded-lg text-[12px] font-medium transition-all duration-150 ${
                 isHoliday
                   ? type === 'HOLIDAY'
-                    ? 'bg-amber-500/30 border border-amber-500/50 text-amber-300'
-                    : 'bg-violet-500/30 border border-violet-500/50 text-violet-300'
-                  : isToday
-                    ? 'bg-white/15 border border-white/30 text-white'
-                    : 'hover:bg-white/8 text-[#9F8BC7] border border-transparent hover:border-violet-500/20'
+                    ? `bg-amber-500/30 border border-amber-500/50 text-amber-300 ${isPast ? 'opacity-60 cursor-not-allowed' : ''}`
+                    : `bg-violet-500/30 border border-violet-500/50 text-violet-300 ${isPast ? 'opacity-60 cursor-not-allowed' : ''}`
+                  : isPast
+                    ? 'text-[#4A3F6A] opacity-40 cursor-not-allowed border border-transparent'
+                    : isToday
+                      ? 'bg-white/15 border border-white/30 text-white'
+                      : 'hover:bg-white/8 text-[#9F8BC7] border border-transparent hover:border-violet-500/20'
               }`}
             >{day}</button>
           )

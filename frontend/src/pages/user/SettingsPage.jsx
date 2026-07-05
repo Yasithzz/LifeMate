@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import {
-  Palette, Globe, Lock, Key, Shield, Mail,
+  Palette, Lock, Key, Shield, Mail,
   CheckCircle, AlertCircle, Loader2, Eye, EyeOff,
-  RefreshCw, Sun, Moon, Monitor, Check,
+  RefreshCw, Sun, Moon, Monitor, Check, Trash2, X, AlertTriangle,
 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import UserLayout from '../../components/UserLayout'
 import {
   changePassword, getSecurityInfo,
   sendEmailVerificationOtp, verifyEmail,
   forgotPasswordInitiate, forgotPasswordReset,
+  deleteMyAccount, clearSession,
 } from '../../lib/api'
 
 // ─── shared style constants ───────────────────────────────────────
@@ -40,7 +42,6 @@ const NAV = [
     group: 'General',
     items: [
       { id: 'appearance', label: 'Appearance', icon: Palette },
-      { id: 'language', label: 'Language & Region', icon: Globe },
     ],
   },
   {
@@ -49,6 +50,12 @@ const NAV = [
       { id: 'password', label: 'Change Password', icon: Lock },
       { id: 'forgot', label: 'Forgot Password', icon: Key },
       { id: 'verifications', label: 'Verifications', icon: Shield },
+    ],
+  },
+  {
+    group: 'Account',
+    items: [
+      { id: 'account', label: 'Delete Account', icon: Trash2 },
     ],
   },
 ]
@@ -62,15 +69,22 @@ const ACCENT_COLORS = [
   { name: 'Indigo', value: 'indigo', hex: ['#4338ca', '#8b5cf6'] },
 ]
 const THEMES = [
-  { id: 'dark', label: 'Dark', icon: Moon, desc: 'Default dark theme' },
+  { id: 'dark',   label: 'Dark',   icon: Moon,    desc: 'Default dark theme' },
   { id: 'system', label: 'System', icon: Monitor, desc: 'Follow system setting' },
-  { id: 'light', label: 'Light', icon: Sun, desc: 'Coming soon' },
+  { id: 'light',  label: 'Light',  icon: Sun,     desc: 'Bright light theme' },
 ]
+
+function applyThemeToDom(t) {
+  const resolved = t === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : t
+  document.documentElement.setAttribute('data-theme', resolved)
+}
 
 function AppearanceSection() {
   const [accent, setAccent] = useState(() => localStorage.getItem('lm_accent') || 'violet')
-  const [theme, setTheme] = useState(() => localStorage.getItem('lm_theme') || 'dark')
-  const [saved, setSaved] = useState(false)
+  const [theme, setTheme]   = useState(() => localStorage.getItem('lm_theme') || 'dark')
+  const [saved, setSaved]   = useState(false)
 
   const save = () => {
     localStorage.setItem('lm_accent', accent)
@@ -80,6 +94,7 @@ function AppearanceSection() {
     } else {
       document.documentElement.removeAttribute('data-accent')
     }
+    applyThemeToDom(theme)
     setSaved(true); setTimeout(() => setSaved(false), 2000)
   }
 
@@ -96,9 +111,13 @@ function AppearanceSection() {
         <div className="grid grid-cols-3 gap-3">
           {THEMES.map(({ id, label, icon: Icon, desc }) => (
             <button key={id} onClick={() => setTheme(id)}
-              className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 ${theme === id ? 'bg-violet-600/20 border-violet-500/50' : 'bg-white/5 border-violet-500/10 hover:border-violet-500/30'} ${id === 'light' ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={id === 'light'}>
-              {theme === id && <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center"><Check size={10} className="text-white" /></div>}
+              className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 cursor-pointer
+                ${theme === id ? 'bg-violet-600/20 border-violet-500/50' : 'bg-white/5 border-violet-500/10 hover:border-violet-500/30'}`}>
+              {theme === id && (
+                <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center">
+                  <Check size={10} className="text-white" />
+                </div>
+              )}
               <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${theme === id ? 'bg-violet-500/30' : 'bg-white/8'}`}>
                 <Icon size={20} className={theme === id ? 'text-violet-300' : 'text-[#7B6A9A]'} />
               </div>
@@ -129,58 +148,6 @@ function AppearanceSection() {
       {saved && <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2"><CheckCircle size={14} />Preferences saved!</div>}
       <button onClick={save} className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_20px_rgba(124,58,237,0.35)]">
         Save Appearance
-      </button>
-    </div>
-  )
-}
-
-// ─── Language section ─────────────────────────────────────────────
-const LANGUAGES = ['English (US)', 'English (UK)', 'Spanish', 'French', 'German', 'Japanese', 'Chinese (Simplified)', 'Arabic', 'Hindi', 'Portuguese']
-const TIMEZONES = ['(GMT+5:30) Colombo', '(GMT+0:00) London', '(GMT-5:00) New York', '(GMT-8:00) Los Angeles', '(GMT+9:00) Tokyo', '(GMT+8:00) Singapore']
-
-function LanguageSection() {
-  const [lang, setLang] = useState(() => localStorage.getItem('lm_lang') || 'English (US)')
-  const [tz, setTz] = useState(() => localStorage.getItem('lm_tz') || '(GMT+5:30) Colombo')
-  const [saved, setSaved] = useState(false)
-
-  const save = () => {
-    localStorage.setItem('lm_lang', lang)
-    localStorage.setItem('lm_tz', tz)
-    setSaved(true); setTimeout(() => setSaved(false), 2000)
-  }
-
-  const sel = inputCls + ' cursor-pointer'
-
-  return (
-    <div className="space-y-8 max-w-xl">
-      <div>
-        <h2 className="text-[18px] font-bold text-white mb-1">Language & Region</h2>
-        <p className="text-[#7B6A9A] text-sm">Choose your preferred language and regional settings</p>
-      </div>
-
-      <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-start gap-2">
-        <AlertCircle size={15} className="text-amber-400 flex-shrink-0 mt-0.5" />
-        <p className="text-[12px] text-amber-300">Multi-language support is coming soon. Your preference will be saved for when it's available.</p>
-      </div>
-
-      <div className="space-y-5">
-        <div>
-          <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Language</label>
-          <select className={sel} value={lang} onChange={e => setLang(e.target.value)}>
-            {LANGUAGES.map(l => <option key={l}>{l}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Timezone</label>
-          <select className={sel} value={tz} onChange={e => setTz(e.target.value)}>
-            {TIMEZONES.map(t => <option key={t}>{t}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {saved && <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2"><CheckCircle size={14} />Preferences saved!</div>}
-      <button onClick={save} className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_20px_rgba(124,58,237,0.35)]">
-        Save Preferences
       </button>
     </div>
   )
@@ -287,7 +254,7 @@ function ForgotPasswordSection() {
       {step === 1 && (
         <form onSubmit={reset} className="space-y-4">
           <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl p-3 text-[13px] text-violet-300">
-            OTP sent to your {method === 'phone' ? 'phone number' : 'email'}. Valid for 10 minutes.
+            OTP sent to your email. Valid for 10 minutes.
           </div>
           <div>
             <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">One-time password</label>
@@ -393,6 +360,98 @@ function VerificationsSection({ security, setSecurity }) {
   )
 }
 
+// ─── Delete Account section ───────────────────────────────────────
+function DeleteAccountSection() {
+  const navigate = useNavigate()
+  const [confirm, setConfirm] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [showModal, setShowModal] = useState(false)
+
+  const handleDelete = async () => {
+    setError('')
+    setLoading(true)
+    try {
+      await deleteMyAccount()
+      clearSession()
+      navigate('/login')
+    } catch (e) {
+      setError(e.message || 'Failed to delete account')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      <div>
+        <h2 className="text-[18px] font-bold text-white mb-1">Delete Account</h2>
+        <p className="text-[#7B6A9A] text-sm">Permanently remove your account and all associated data</p>
+      </div>
+
+      <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-5 space-y-3">
+        <div className="flex items-start gap-3">
+          <AlertTriangle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-[14px] font-semibold text-red-300 mb-1">This action is permanent and cannot be undone</p>
+            <p className="text-[12px] text-red-400/80">Deleting your account will erase all your data including tasks, wellness logs, schedules, notifications, and account settings.</p>
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={() => setShowModal(true)}
+        className="flex items-center gap-2 px-5 py-2.5 bg-red-500/15 border border-red-500/25 text-red-400 font-bold rounded-xl text-[14px] hover:bg-red-500/25 transition-colors">
+        <Trash2 size={15} /> Delete My Account
+      </button>
+
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-[#0D0520] border border-red-500/30 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-500/15 border border-red-500/25 flex items-center justify-center">
+                  <AlertTriangle size={18} className="text-red-400" />
+                </div>
+                <h3 className="text-[15px] font-bold text-white">Confirm Deletion</h3>
+              </div>
+              <button onClick={() => { setShowModal(false); setConfirm(''); setError('') }}
+                className="text-[#6B5E8A] hover:text-violet-400 transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <p className="text-[13px] text-[#9F8BC7] mb-3">
+              Type <span className="font-bold text-red-400">DELETE</span> to confirm you want to permanently delete your account.
+            </p>
+            <input
+              type="text"
+              placeholder="Type DELETE to confirm"
+              value={confirm}
+              onChange={e => { setConfirm(e.target.value); setError('') }}
+              className={inputCls + ' mb-4'}
+            />
+            {error && <p className="text-red-400 text-[12px] bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2 mb-4">{error}</p>}
+            <div className="flex gap-3">
+              <button
+                onClick={handleDelete}
+                disabled={loading || confirm !== 'DELETE'}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-red-500/20 border border-red-500/30 text-red-400 font-bold rounded-xl text-[13px] hover:bg-red-500/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                {loading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                {loading ? 'Deleting…' : 'Delete Account'}
+              </button>
+              <button
+                onClick={() => { setShowModal(false); setConfirm(''); setError('') }}
+                disabled={loading}
+                className="flex-1 py-2.5 border border-violet-500/20 text-[#9F8BC7] font-medium rounded-xl text-[13px] hover:bg-white/5 transition-colors disabled:opacity-50">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────
 export default function SettingsPage() {
   const [active, setActive] = useState('appearance')
@@ -415,7 +474,11 @@ export default function SettingsPage() {
         <div className="md:hidden grid grid-cols-2 gap-2 w-full">
           {NAV.flatMap(({ items }) => items).map(({ id, label, icon: Icon }) => (
             <button key={id} onClick={() => setActive(id)}
-              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 text-left ${active === id ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.15)]' : 'text-[#7B6A9A] bg-white/5 border border-violet-500/10 hover:text-violet-300'}`}>
+              className={`flex items-center gap-2 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 text-left ${
+                id === 'account'
+                  ? active === id ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'text-red-500/60 bg-white/5 border border-red-500/10 hover:text-red-400'
+                  : active === id ? 'bg-violet-600/20 text-violet-300 border border-violet-500/30 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.15)]' : 'text-[#7B6A9A] bg-white/5 border border-violet-500/10 hover:text-violet-300'
+              }`}>
               <Icon size={14} className="flex-shrink-0" />
               <span className="truncate">{label}</span>
             </button>
@@ -430,7 +493,11 @@ export default function SettingsPage() {
               <div className="space-y-0.5">
                 {items.map(({ id, label, icon: Icon }) => (
                   <button key={id} onClick={() => setActive(id)}
-                    className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13.5px] font-medium transition-all duration-200 text-left ${active === id ? 'bg-violet-600/20 text-violet-300 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.2)]' : 'text-[#7B6A9A] hover:bg-white/5 hover:text-violet-300'}`}>
+                    className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13.5px] font-medium transition-all duration-200 text-left ${
+                      id === 'account'
+                        ? active === id ? 'bg-red-500/20 text-red-400 shadow-[inset_0_0_0_1px_rgba(239,68,68,0.2)]' : 'text-red-500/60 hover:bg-red-500/10 hover:text-red-400'
+                        : active === id ? 'bg-violet-600/20 text-violet-300 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.2)]' : 'text-[#7B6A9A] hover:bg-white/5 hover:text-violet-300'
+                    }`}>
                     <Icon size={15} className="flex-shrink-0" />
                     {label}
                   </button>
@@ -443,7 +510,6 @@ export default function SettingsPage() {
         {/* Right content */}
         <div className="flex-1 min-w-0">
           {active === 'appearance' && <AppearanceSection />}
-          {active === 'language' && <LanguageSection />}
           {active === 'password' && <ChangePasswordSection />}
           {active === 'forgot' && <ForgotPasswordSection />}
           {active === 'verifications' && (
@@ -451,6 +517,7 @@ export default function SettingsPage() {
               ? <div className="flex justify-center py-16"><Loader2 size={24} className="text-violet-400 animate-spin" /></div>
               : <VerificationsSection security={security} setSecurity={setSecurity} />
           )}
+          {active === 'account' && <DeleteAccountSection />}
         </div>
       </div>
     </UserLayout>

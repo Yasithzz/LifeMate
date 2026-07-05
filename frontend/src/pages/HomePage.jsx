@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Star } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import { getPublicFeedbacks } from '../lib/api'
 
 /* ── Feature cards data ── */
 const FEATURES = [
@@ -67,26 +69,14 @@ const STEPS = [
   },
 ]
 
-const TESTIMONIALS = [
-  {
-    quote: '"LifeMate completely changed how I approach my mornings. My productivity doubled and I finally feel in control of my life."',
-    name: 'Sarah K.',
-    role: 'Product Designer',
-    from: '#7C3AED', to: '#EC4899',
-  },
-  {
-    quote: '"I\'ve tried countless habit apps but LifeMate is the only one that made me actually stick to my routines. The progress insights are incredible."',
-    name: 'Marcus J.',
-    role: 'Entrepreneur',
-    from: '#06B6D4', to: '#7C3AED',
-    featured: true,
-  },
-  {
-    quote: '"Within 3 months I built 6 new habits and lost 15 pounds. LifeMate\'s approach to wellness tracking is unlike anything I\'ve used before."',
-    name: 'Priya M.',
-    role: 'Fitness Coach',
-    from: '#10B981', to: '#06B6D4',
-  },
+// Avatar gradient pairs — cycled by index
+const AVATAR_GRADIENTS = [
+  ['#7C3AED', '#EC4899'],
+  ['#06B6D4', '#7C3AED'],
+  ['#10B981', '#06B6D4'],
+  ['#F59E0B', '#EC4899'],
+  ['#EC4899', '#F97316'],
+  ['#7C3AED', '#10B981'],
 ]
 
 /* ── Small reusable section header ── */
@@ -105,6 +95,17 @@ function SectionHeader({ badge, title, subtitle }) {
 }
 
 export default function HomePage() {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  document.documentElement.removeAttribute('data-accent')
+
+  const [feedbacks, setFeedbacks] = useState([])
+
+  useEffect(() => {
+    getPublicFeedbacks().then(data => {
+      if (Array.isArray(data)) setFeedbacks(data)
+    }).catch(() => {})
+  }, [])
+
   return (
     <div className="bg-[#050213] text-[#E2D9F3] font-[Inter,system-ui,sans-serif] overflow-x-hidden">
       <Navbar />
@@ -323,37 +324,59 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ════════════════ TESTIMONIALS ════════════════ */}
-      <section id="testimonials" className="py-24 px-6 bg-[#050213]">
-        <div className="max-w-[1200px] mx-auto">
-          <SectionHeader
-            badge="Stories"
-            title="Real People, Real Transformations"
-            subtitle="See how LifeMate is changing lives every single day."
-          />
+      {/* ════════════════ USER FEEDBACK ════════════════ */}
+      {feedbacks.length > 0 && (
+        <section id="testimonials" className="py-24 px-6 bg-[#050213]">
+          <div className="max-w-[1200px] mx-auto">
+            <SectionHeader
+              badge="From Our Users"
+              title="Real People, Real Transformations"
+              subtitle="Hear directly from the LifeMate community."
+            />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map(t => (
-              <div key={t.name}
-                className={`rounded-2xl p-8 transition-all duration-300
-                  ${t.featured
-                    ? 'bg-violet-500/10 border border-violet-500/35 shadow-[0_0_40px_rgba(124,58,237,0.1)]'
-                    : 'bg-white/[0.03] border border-violet-500/15'}`}>
-                <p className="text-amber-400 text-base mb-4">★★★★★</p>
-                <p className="text-violet-200 text-[15px] leading-relaxed mb-6 italic">{t.quote}</p>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex-shrink-0"
-                    style={{ background: `linear-gradient(135deg, ${t.from}, ${t.to})` }} />
-                  <div>
-                    <p className="text-white text-sm font-semibold">{t.name}</p>
-                    <p className="text-[#9F8BC7] text-xs">{t.role}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {feedbacks.slice(0, 6).map((fb, i) => {
+                const [from, to] = AVATAR_GRADIENTS[i % AVATAR_GRADIENTS.length]
+                const featured   = i === 1
+                return (
+                  <div key={fb.id}
+                    className={`rounded-2xl p-8 transition-all duration-300
+                      ${featured
+                        ? 'bg-violet-500/10 border border-violet-500/35 shadow-[0_0_40px_rgba(124,58,237,0.1)]'
+                        : 'bg-white/[0.03] border border-violet-500/15 hover:bg-violet-500/[0.06] hover:-translate-y-0.5'
+                      }`}>
+                    {/* Stars */}
+                    <div className="flex gap-0.5 mb-4">
+                      {[1,2,3,4,5].map(n => (
+                        <Star key={n} size={14}
+                          fill={n <= fb.rating ? '#f59e0b' : 'transparent'}
+                          stroke={n <= fb.rating ? '#f59e0b' : '#4A3F6A'}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-violet-200 text-[15px] leading-relaxed mb-6 italic">
+                      &ldquo;{fb.message}&rdquo;
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white text-[13px] font-bold"
+                        style={{ background: `linear-gradient(135deg, ${from}, ${to})` }}>
+                        {fb.userName?.[0]?.toUpperCase() ?? '?'}
+                      </div>
+                      <p className="text-white text-sm font-semibold">{fb.userName}</p>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                )
+              })}
+            </div>
+
+            {feedbacks.length > 6 && (
+              <p className="text-center text-[13px] text-[#5A4F7A] mt-8">
+                +{feedbacks.length - 6} more reviews from our community
+              </p>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ════════════════ FINAL CTA ════════════════ */}
       <section className="relative py-24 px-6 text-center overflow-hidden bg-gradient-to-br from-[#0D0520] via-[#1A0A3D] to-[#0D0520]">

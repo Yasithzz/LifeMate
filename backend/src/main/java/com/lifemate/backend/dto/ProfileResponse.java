@@ -14,5 +14,6 @@ public record ProfileResponse(
         String workoutPreference,
         String freeTimePreference,
         Boolean reminderPreference,
-        List<String> workingDays
+        List<String> workingDays,
+        String avatarBase64
 ) {}

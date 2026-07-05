@@ -1,180 +1,229 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Droplets, Dumbbell, CheckCircle, Clock, TrendingUp,
-  AlertTriangle, Activity, Plus, ArrowRight, Flame, Brain,
+  Droplets, Dumbbell, CheckSquare, Clock,
+  TrendingUp, Activity, Plus, ArrowRight, Brain,
 } from 'lucide-react'
 import UserLayout from '../../components/UserLayout'
-import {
-  getSession, getWellness, getTasks, getLifestyleLatest, getUnreadCount,
-} from '../../lib/api'
-
-const STRESS_COLORS = {
-  Low: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/25' },
-  Medium: { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/25' },
-  High: { bg: 'bg-red-500/15', text: 'text-red-400', border: 'border-red-500/25' },
-}
+import { getSession, getWellness, getTasks, getLifestyleLatest } from '../../lib/api'
+import { fmtDateLong, fmtDateShort } from '../../lib/locale'
 
 function getGreeting() {
   const h = new Date().getHours()
-  return h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+  if (h < 5)  return 'Still up?'
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  if (h < 21) return 'Good evening'
+  return 'Good night'
+}
+
+const STRESS_PILL = {
+  Low:    'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+  Medium: 'text-amber-400   bg-amber-500/10   border-amber-500/20',
+  High:   'text-red-400     bg-red-500/10     border-red-500/20',
+}
+
+const PRIORITY_DOT = {
+  High:   'bg-red-400',
+  Medium: 'bg-amber-400',
+  Low:    'bg-emerald-400',
 }
 
 export default function DashboardHome() {
   const navigate = useNavigate()
-  const session = getSession()
-  const [tasks, setTasks] = useState([])
+  const session  = getSession()
+  const [tasks,    setTasks]    = useState([])
   const [wellness, setWellness] = useState(null)
   const [analysis, setAnalysis] = useState(null)
-  const [, setUnread] = useState(0)
-  const [loading, setLoading] = useState(true)
+  const [loading,  setLoading]  = useState(true)
 
   useEffect(() => {
-    Promise.allSettled([getTasks(), getWellness(), getLifestyleLatest(), getUnreadCount()])
-      .then(([t, w, a, n]) => {
+    Promise.allSettled([getTasks(), getWellness(), getLifestyleLatest()])
+      .then(([t, w, a]) => {
         if (t.status === 'fulfilled') setTasks(t.value ?? [])
         if (w.status === 'fulfilled') setWellness(w.value)
         if (a.status === 'fulfilled' && a.value) setAnalysis(a.value)
-        if (n.status === 'fulfilled') setUnread(n.value?.count ?? 0)
       })
       .finally(() => setLoading(false))
   }, [])
 
-  const today = new Date().toISOString().split('T')[0]
-  const pending = tasks.filter(t => t.status !== 'Completed')
-  const completedToday = tasks.filter(t => t.completedAt && t.completedAt.startsWith(today))
-  const todayWorkouts = wellness?.workoutHistory?.filter(w => w.recordedAt?.startsWith(today)) ?? []
-  const stressColors = analysis?.stressLevel ? STRESS_COLORS[analysis.stressLevel] : null
+  const today         = new Date().toISOString().split('T')[0]
+  const pending       = tasks.filter(t => t.status !== 'Completed')
+  const doneToday     = tasks.filter(t => t.completedAt?.startsWith(today)).length
+  const waterCups     = wellness?.todayWater ?? 0
+  const waterPct      = Math.min(100, Math.round((waterCups / 8) * 100))
+  const workoutsToday = (wellness?.workoutHistory ?? []).filter(w => w.recordedAt?.startsWith(today)).length
+  const name          = session?.fullName?.split(' ')[0] ?? ''
 
   return (
     <UserLayout>
-      <div className="mb-8">
-        <p className="text-[#7B6A9A] text-sm">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-        <h1 className="text-[28px] font-extrabold text-white tracking-tight mt-0.5">
-          {getGreeting()}, {session?.fullName?.split(' ')[0]} 👋
+
+      {/* ── Greeting ─────────────────────────────────────────────── */}
+      <div className="mb-10">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#4A3F6A] mb-2">
+          {fmtDateLong(new Date())}
+        </p>
+        <h1 className="text-[38px] sm:text-[46px] font-black text-white leading-none tracking-tight">
+          {getGreeting()}{name ? `,` : '.'}<br />
+          {name && <span className="text-violet-400">{name}.</span>}
         </h1>
+        {analysis?.stressLevel && (
+          <div className="mt-4 inline-flex items-center gap-2">
+            <span className="text-[12px] text-[#5A4F7A]">Today's stress reading —</span>
+            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${STRESS_PILL[analysis.stressLevel] ?? 'text-[#7B6A9A] bg-white/5 border-white/10'}`}>
+              {analysis.stressLevel}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Prompt to log lifestyle data */}
+      {/* ── Log lifestyle prompt ──────────────────────────────────── */}
       {!loading && !analysis && (
-        <div
-          onClick={() => navigate('/dashboard/lifestyle')}
-          className="mb-6 flex items-center justify-between bg-gradient-to-r from-violet-600/20 to-pink-500/10 border border-violet-500/25 rounded-2xl p-4 cursor-pointer hover:border-violet-500/40 transition-all duration-200 group"
-        >
+        <button onClick={() => navigate('/dashboard/lifestyle')}
+          className="w-full mb-8 flex items-center justify-between px-5 py-4 rounded-2xl border border-dashed border-violet-500/30 hover:border-violet-500/60 hover:bg-violet-500/5 transition-all duration-200 group text-left">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-violet-600/30 flex items-center justify-center">
-              <Brain size={18} className="text-violet-300" />
-            </div>
+            <Brain size={18} className="text-violet-400" />
             <div>
-              <p className="text-white text-[14px] font-semibold">Log today's lifestyle data</p>
-              <p className="text-[#7B6A9A] text-[12px]">Get your personalized stress analysis & schedule</p>
+              <p className="text-[14px] font-semibold text-white">Log today's check-in</p>
+              <p className="text-[12px] text-[#5A4F7A] mt-0.5">Get a personalized stress analysis and schedule</p>
             </div>
           </div>
-          <ArrowRight size={16} className="text-violet-400 group-hover:translate-x-1 transition-transform duration-200" />
-        </div>
+          <ArrowRight size={15} className="text-[#4A3F6A] group-hover:text-violet-400 group-hover:translate-x-1 transition-all" />
+        </button>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className={`rounded-2xl p-5 border ${stressColors ? `${stressColors.bg} ${stressColors.border}` : 'bg-white/5 border-violet-500/15'}`}>
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A]">Stress Level</span>
-            <AlertTriangle size={16} className={stressColors?.text ?? 'text-[#4A3F6A]'} />
+      {/* ── Stats strip ──────────────────────────────────────────── */}
+      <div className="flex gap-0 mb-10 rounded-2xl overflow-hidden border border-white/[0.06] bg-white/[0.02]">
+        {[
+          {
+            label: 'Tasks done',
+            value: doneToday,
+            sub: `${pending.length} pending`,
+            accent: 'text-white',
+          },
+          {
+            label: 'Water today',
+            value: waterCups,
+            sub: `${waterPct}% of daily goal`,
+            accent: 'text-sky-300',
+            bar: waterPct,
+            barColor: 'bg-sky-400',
+          },
+          {
+            label: 'Workouts',
+            value: workoutsToday,
+            sub: `${wellness?.workoutHistory?.length ?? 0} all-time`,
+            accent: 'text-orange-300',
+          },
+          {
+            label: 'Pending tasks',
+            value: pending.length,
+            sub: tasks.length > 0 ? `${Math.round((doneToday / Math.max(tasks.length, 1)) * 100)}% completion` : 'No tasks yet',
+            accent: pending.length > 5 ? 'text-amber-300' : 'text-white',
+          },
+        ].map((s, i) => (
+          <div key={s.label}
+            className={`flex-1 px-5 py-5 ${i < 3 ? 'border-r border-white/[0.05]' : ''}`}>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#3A3060] mb-2">{s.label}</p>
+            <p className={`text-[28px] font-black leading-none ${s.accent}`}>{loading ? '—' : s.value}</p>
+            {s.bar !== undefined && !loading && (
+              <div className="mt-2 h-[3px] bg-white/10 rounded-full overflow-hidden">
+                <div className={`h-full rounded-full transition-all duration-700 ${s.barColor}`} style={{ width: `${s.bar}%` }} />
+              </div>
+            )}
+            <p className="text-[11px] text-[#3A3060] mt-1.5">{loading ? '…' : s.sub}</p>
           </div>
-          <p className={`text-2xl font-extrabold ${stressColors?.text ?? 'text-[#4A3F6A]'}`}>{analysis?.stressLevel ?? '—'}</p>
-          {analysis && <p className="text-[11px] text-[#7B6A9A] mt-1">Score: {analysis.predictionScore}%</p>}
-        </div>
-
-        <div className="rounded-2xl p-5 bg-white/5 border border-violet-500/15">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A]">Hydration</span>
-            <Droplets size={16} className="text-sky-400" />
-          </div>
-          <p className="text-2xl font-extrabold text-white">{wellness?.todayWater ?? 0} <span className="text-[#7B6A9A] text-base font-medium">cups</span></p>
-          <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
-            <div className="h-full bg-sky-400 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, ((wellness?.todayWater ?? 0) / 8) * 100)}%` }} />
-          </div>
-        </div>
-
-        <div className="rounded-2xl p-5 bg-white/5 border border-violet-500/15">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A]">Tasks Done</span>
-            <CheckCircle size={16} className="text-emerald-400" />
-          </div>
-          <p className="text-2xl font-extrabold text-white">{completedToday.length} <span className="text-[#7B6A9A] text-base font-medium">today</span></p>
-          <p className="text-[11px] text-[#7B6A9A] mt-1">{pending.length} pending</p>
-        </div>
-
-        <div className="rounded-2xl p-5 bg-white/5 border border-violet-500/15">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A]">Workouts</span>
-            <Flame size={16} className="text-orange-400" />
-          </div>
-          <p className="text-2xl font-extrabold text-white">{todayWorkouts.length} <span className="text-[#7B6A9A] text-base font-medium">today</span></p>
-          <p className="text-[11px] text-[#7B6A9A] mt-1">{wellness?.workoutHistory?.length ?? 0} total</p>
-        </div>
+        ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Pending tasks */}
-        <div className="lg:col-span-2 bg-white/5 border border-violet-500/15 rounded-2xl p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-[16px] font-bold text-white">Pending Tasks</h2>
-            <button onClick={() => navigate('/dashboard/tasks')} className="text-[12px] text-violet-400 hover:text-violet-300 flex items-center gap-1 transition-colors">
-              View all <ArrowRight size={13} />
+      {/* ── Main content: tasks + quick actions ──────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-8">
+
+        {/* Tasks */}
+        <div>
+          <div className="flex items-baseline justify-between mb-4">
+            <h2 className="text-[18px] font-bold text-white">Pending tasks</h2>
+            <button onClick={() => navigate('/dashboard/tasks')}
+              className="text-[11px] font-medium text-[#5A4F7A] hover:text-violet-400 transition-colors flex items-center gap-1">
+              All tasks <ArrowRight size={11} />
             </button>
           </div>
+
           {loading ? (
-            <div className="py-8 text-center text-[#7B6A9A] text-sm">Loading…</div>
+            <div className="space-y-3">
+              {[1,2,3].map(i => (
+                <div key={i} className="h-14 rounded-xl bg-white/[0.03] animate-pulse" />
+              ))}
+            </div>
           ) : pending.length === 0 ? (
-            <div className="text-center py-8">
-              <CheckCircle size={32} className="text-[#4A3F6A] mx-auto mb-2" />
-              <p className="text-[#7B6A9A] text-sm">All caught up! No pending tasks.</p>
+            <div className="py-12 text-center">
+              <CheckSquare size={28} className="text-[#2A2050] mx-auto mb-2" />
+              <p className="text-[#4A3F6A] text-sm">Nothing pending — you're clear.</p>
             </div>
           ) : (
-            <div className="space-y-2">
-              {pending.slice(0, 5).map(task => (
-                <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors">
-                  <div className={`w-2 h-2 rounded-full flex-shrink-0 ${task.priority === 'High' ? 'bg-red-400' : task.priority === 'Medium' ? 'bg-amber-400' : 'bg-emerald-400'}`} />
+            <div className="space-y-1">
+              {pending.slice(0, 7).map(task => (
+                <div key={task.id}
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl hover:bg-white/[0.04] transition-colors group cursor-default">
+                  <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority] ?? 'bg-[#4A3F6A]'}`} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14px] text-white font-medium truncate">{task.title}</p>
-                    <p className="text-[11px] text-[#7B6A9A]">{task.category} · {task.priority}</p>
+                    <p className="text-[13.5px] text-[#C4B5D9] font-medium truncate group-hover:text-white transition-colors">{task.title}</p>
+                    <p className="text-[11px] text-[#3A3060] mt-0.5">{task.category}</p>
                   </div>
                   {task.deadline && (
-                    <span className="text-[11px] text-[#7B6A9A] flex-shrink-0">
-                      {new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    <span className="text-[11px] text-[#3A3060] flex-shrink-0">
+                      {fmtDateShort(task.deadline)}
                     </span>
                   )}
                 </div>
               ))}
+              {pending.length > 7 && (
+                <button onClick={() => navigate('/dashboard/tasks')}
+                  className="w-full py-2.5 text-[12px] text-[#4A3F6A] hover:text-violet-400 transition-colors text-center">
+                  +{pending.length - 7} more
+                </button>
+              )}
             </div>
           )}
         </div>
 
-        {/* Quick actions */}
+        {/* Quick links — vertical card stack, each unique */}
         <div>
-          <h2 className="text-[16px] font-bold text-white mb-4">Quick Actions</h2>
-          <div className="space-y-3">
-            {[
-              { label: 'Log Water Intake', icon: Droplets, color: 'text-sky-400', to: '/dashboard/wellness' },
-              { label: 'Log Workout', icon: Dumbbell, color: 'text-orange-400', to: '/dashboard/wellness' },
-              { label: 'Add New Task', icon: Plus, color: 'text-violet-400', to: '/dashboard/tasks' },
-              { label: 'View Schedule', icon: Clock, color: 'text-pink-400', to: '/dashboard/schedule' },
-              { label: 'Productivity Report', icon: TrendingUp, color: 'text-emerald-400', to: '/dashboard/productivity' },
-              { label: 'Log Lifestyle Data', icon: Activity, color: 'text-amber-400', to: '/dashboard/lifestyle' },
-            ].map(({ label, icon: Icon, color, to }) => (
-              <button
-                key={label}
-                onClick={() => navigate(to)}
-                className="flex items-center gap-3 w-full px-4 py-3 bg-white/5 border border-violet-500/10 rounded-xl text-[13.5px] font-medium text-[#C4B5D9] hover:bg-white/8 hover:border-violet-500/25 hover:text-white transition-all duration-200 group"
-              >
-                <Icon size={16} className={`${color} flex-shrink-0`} />
-                {label}
-                <ArrowRight size={13} className="ml-auto text-[#4A3F6A] group-hover:text-violet-400 group-hover:translate-x-0.5 transition-all duration-200" />
-              </button>
-            ))}
+          <h2 className="text-[18px] font-bold text-white mb-4">Quick add</h2>
+          <div className="space-y-2">
+            <button onClick={() => navigate('/dashboard/wellness')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-sky-500/8 border border-sky-500/15 hover:border-sky-500/35 hover:bg-sky-500/12 transition-all text-left group">
+              <Droplets size={15} className="text-sky-400 flex-shrink-0" />
+              <span className="text-[13px] text-[#9FC8E0] font-medium group-hover:text-white transition-colors">Log water</span>
+            </button>
+            <button onClick={() => navigate('/dashboard/wellness')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-orange-500/8 border border-orange-500/15 hover:border-orange-500/35 hover:bg-orange-500/12 transition-all text-left group">
+              <Dumbbell size={15} className="text-orange-400 flex-shrink-0" />
+              <span className="text-[13px] text-[#E0C09F] font-medium group-hover:text-white transition-colors">Log workout</span>
+            </button>
+            <button onClick={() => navigate('/dashboard/tasks')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-violet-500/8 border border-violet-500/15 hover:border-violet-500/35 hover:bg-violet-500/12 transition-all text-left group">
+              <Plus size={15} className="text-violet-400 flex-shrink-0" />
+              <span className="text-[13px] text-[#C4B5D9] font-medium group-hover:text-white transition-colors">New task</span>
+            </button>
+            <button onClick={() => navigate('/dashboard/schedule')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-pink-500/8 border border-pink-500/15 hover:border-pink-500/35 hover:bg-pink-500/12 transition-all text-left group">
+              <Clock size={15} className="text-pink-400 flex-shrink-0" />
+              <span className="text-[13px] text-[#E0B4C8] font-medium group-hover:text-white transition-colors">My schedule</span>
+            </button>
+            <button onClick={() => navigate('/dashboard/productivity')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-500/8 border border-emerald-500/15 hover:border-emerald-500/35 hover:bg-emerald-500/12 transition-all text-left group">
+              <TrendingUp size={15} className="text-emerald-400 flex-shrink-0" />
+              <span className="text-[13px] text-[#9FDEC0] font-medium group-hover:text-white transition-colors">Productivity</span>
+            </button>
+            <button onClick={() => navigate('/dashboard/lifestyle')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-amber-500/8 border border-amber-500/15 hover:border-amber-500/35 hover:bg-amber-500/12 transition-all text-left group">
+              <Activity size={15} className="text-amber-400 flex-shrink-0" />
+              <span className="text-[13px] text-[#DEC89F] font-medium group-hover:text-white transition-colors">Lifestyle check-in</span>
+            </button>
           </div>
         </div>
+
       </div>
     </UserLayout>
   )

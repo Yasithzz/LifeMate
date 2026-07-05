@@ -9,6 +9,7 @@ public record TaskResponse(
         String priority,
         String status,
         String deadline,
+        String deadlineTime,
         Integer durationMinutes,
         Instant createdAt,
         Instant completedAt

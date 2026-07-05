@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { TrendingUp, CheckCircle2, Clock, Target, BarChart3, Award, Loader2 } from 'lucide-react'
+import { TrendingUp, CheckCircle2, Clock, Target, BarChart3, Award, Loader2, Droplets } from 'lucide-react'
 import UserLayout from '../../components/UserLayout'
 import { getTasks, getWellness, getLifestyleHistory, getLifestyleLatest } from '../../lib/api'
 
@@ -167,6 +167,22 @@ export default function ProductivityPage() {
             </div>
           </div>
         </div>
+
+        {wellness?.waterHistory?.length > 0 && (
+          <div className="mt-6 bg-white/5 border border-violet-500/15 rounded-2xl p-6">
+            <h2 className="text-[15px] font-bold text-white mb-4 flex items-center gap-2"><Droplets size={17} className="text-sky-400" /> Water Intake History</h2>
+            <div className="space-y-2 max-h-64 overflow-y-auto">
+              {wellness.waterHistory.map(w => (
+                <div key={w.id} className="flex items-center justify-between py-2 border-b border-violet-500/8 last:border-0">
+                  <span className="text-[13px] text-white font-medium">{w.amount} cup{w.amount > 1 ? 's' : ''}</span>
+                  <span className="text-[11px] text-[#7B6A9A]">
+                    {new Date(w.recordedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {new Date(w.recordedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </UserLayout>
   )
