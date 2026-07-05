@@ -10,4 +10,5 @@ public interface TaskRepository extends MongoRepository<Task, String> {
     List<Task> findByUserEmailOrderByCreatedAtDesc(String userEmail);
     List<Task> findByUserEmailAndStatus(String userEmail, String status);
     Optional<Task> findByIdAndUserEmail(String id, String userEmail);
+    void deleteByUserEmail(String userEmail);
 }

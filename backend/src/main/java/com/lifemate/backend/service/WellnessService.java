@@ -29,7 +29,7 @@ public class WellnessService {
         Instant todayEnd = todayStart.plus(1, ChronoUnit.DAYS);
 
         List<WaterIntake> todayWater = waterRepo.findByUserEmailAndRecordedAtBetweenOrderByRecordedAtDesc(userEmail, todayStart, todayEnd);
-        int totalToday = todayWater.stream().mapToInt(WaterIntake::getAmount).sum();
+        int totalToday = todayWater.stream().mapToInt(w -> w.getAmount()).sum();
 
         List<WellnessResponse.WaterEntry> waterHistory = waterRepo.findByUserEmailOrderByRecordedAtDesc(userEmail)
                 .stream().map(w -> new WellnessResponse.WaterEntry(w.getId(), w.getAmount(), w.getRecordedAt())).toList();

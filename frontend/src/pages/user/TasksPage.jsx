@@ -12,7 +12,15 @@ const priorityStyle = {
   Low: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
 }
 const inputCls = 'bg-white/5 border border-violet-500/20 rounded-xl px-4 py-2.5 text-[14px] text-[#E2D9F3] placeholder-[#6B5E8A] outline-none focus:border-violet-500/50 focus:ring-1 focus:ring-violet-500/20 transition-all duration-200 w-full'
-const blank = { title: '', category: 'Work', priority: 'Medium', status: 'Pending', deadline: '', durationMinutes: '' }
+const blank = { title: '', category: 'Work', priority: 'Medium', status: 'Pending', deadline: '', deadlineTime: '', durationMinutes: '' }
+const todayStr = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+const nowTimeStr = () => {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+}
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState([])
@@ -22,6 +30,7 @@ export default function TasksPage() {
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState(blank)
   const [saving, setSaving] = useState(false)
+  const [formError, setFormError] = useState('')
 
   useEffect(() => {
     getTasks().then(t => setTasks(t ?? [])).catch(() => {}).finally(() => setLoading(false))
@@ -37,6 +46,17 @@ export default function TasksPage() {
 
   const save = async () => {
     if (!form.title.trim()) return
+    setFormError('')
+    if (form.deadline) {
+      if (form.deadline < todayStr()) {
+        setFormError('Deadline cannot be a past date')
+        return
+      }
+      if (form.deadline === todayStr() && form.deadlineTime && form.deadlineTime < nowTimeStr()) {
+        setFormError('Deadline time cannot be in the past')
+        return
+      }
+    }
     setSaving(true)
     try {
       const payload = { ...form, durationMinutes: form.durationMinutes ? parseInt(form.durationMinutes) : null }
@@ -48,7 +68,7 @@ export default function TasksPage() {
         setTasks(ts => [created, ...ts])
       }
       setForm(blank); setEditId(null); setShowForm(false)
-    } catch { /* ignore */ } finally { setSaving(false) }
+    } catch (err) { setFormError(err?.message || 'Could not save task') } finally { setSaving(false) }
   }
 
   const toggle = async (task) => {
@@ -70,8 +90,8 @@ export default function TasksPage() {
   }
 
   const startEdit = (task) => {
-    setForm({ title: task.title, category: task.category, priority: task.priority, status: task.status, deadline: task.deadline ?? '', durationMinutes: task.durationMinutes ?? '' })
-    setEditId(task.id); setShowForm(true)
+    setForm({ title: task.title, category: task.category, priority: task.priority, status: task.status, deadline: task.deadline ?? '', deadlineTime: task.deadlineTime ?? '', durationMinutes: task.durationMinutes ?? '' })
+    setEditId(task.id); setShowForm(true); setFormError('')
   }
 
   return (
@@ -82,7 +102,7 @@ export default function TasksPage() {
             <h1 className="text-[26px] font-extrabold text-white tracking-tight">Tasks</h1>
             <p className="text-[#7B6A9A] text-sm mt-1">{tasks.length} total · {counts.Pending} pending · {counts.Completed} completed</p>
           </div>
-          <button onClick={() => { setForm(blank); setEditId(null); setShowForm(true) }}
+          <button onClick={() => { setForm(blank); setEditId(null); setShowForm(true); setFormError('') }}
             className="flex items-center gap-2 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-semibold px-4 py-2.5 rounded-xl text-[14px] shadow-[0_4px_20px_rgba(124,58,237,0.35)] hover:shadow-[0_8px_28px_rgba(124,58,237,0.5)] hover:-translate-y-0.5 transition-all duration-200">
             <Plus size={16} /> New Task
           </button>
@@ -92,9 +112,12 @@ export default function TasksPage() {
           <div className="mb-6 bg-[#0F0828]/80 border border-violet-500/25 rounded-2xl p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-[15px] font-bold text-white">{editId ? 'Edit Task' : 'New Task'}</h3>
-              <button onClick={() => { setShowForm(false); setEditId(null) }} className="text-[#7B6A9A] hover:text-white"><X size={18} /></button>
+              <button onClick={() => { setShowForm(false); setEditId(null); setFormError('') }} className="text-[#7B6A9A] hover:text-white"><X size={18} /></button>
             </div>
             <div className="space-y-3">
+              {formError && (
+                <div className="text-[12px] text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{formError}</div>
+              )}
               <input className={inputCls} placeholder="Task title" value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} autoFocus />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <select className={inputCls + ' cursor-pointer'} value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
@@ -104,10 +127,16 @@ export default function TasksPage() {
                   {PRIORITIES.map(p => <option key={p}>{p} Priority</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-[11px] uppercase tracking-widest text-[#7B6A9A] font-semibold block mb-1.5">Deadline</label>
-                  <input type="date" className={inputCls} value={form.deadline} onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
+                  <input type="date" min={todayStr()} className={inputCls} value={form.deadline}
+                    onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-[11px] uppercase tracking-widest text-[#7B6A9A] font-semibold block mb-1.5">Time</label>
+                  <input type="time" min={form.deadline === todayStr() ? nowTimeStr() : undefined} className={inputCls} value={form.deadlineTime}
+                    onChange={e => setForm(f => ({ ...f, deadlineTime: e.target.value }))} />
                 </div>
                 <div>
                   <label className="text-[11px] uppercase tracking-widest text-[#7B6A9A] font-semibold block mb-1.5">Duration (mins)</label>
@@ -123,7 +152,7 @@ export default function TasksPage() {
                 <button onClick={save} disabled={saving} className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold py-2.5 rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60">
                   {saving && <Loader2 size={14} className="animate-spin" />} {editId ? 'Save Changes' : 'Add Task'}
                 </button>
-                <button onClick={() => { setShowForm(false); setEditId(null) }} className="px-4 py-2.5 rounded-xl border border-violet-500/20 text-[#9F8BC7] hover:bg-white/5 text-[14px]">Cancel</button>
+                <button onClick={() => { setShowForm(false); setEditId(null); setFormError('') }} className="px-4 py-2.5 rounded-xl border border-violet-500/20 text-[#9F8BC7] hover:bg-white/5 text-[14px]">Cancel</button>
               </div>
             </div>
           </div>
@@ -157,7 +186,7 @@ export default function TasksPage() {
                   <div className="flex items-center flex-wrap gap-2 mt-1.5">
                     <span className="flex items-center gap-1 text-[11px] text-[#7B6A9A]"><Tag size={11} />{task.category}</span>
                     <span className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${priorityStyle[task.priority]}`}><Flag size={10} className="inline mr-0.5" />{task.priority}</span>
-                    {task.deadline && <span className="flex items-center gap-1 text-[11px] text-[#7B6A9A]"><Clock size={11} />{new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                    {task.deadline && <span className="flex items-center gap-1 text-[11px] text-[#7B6A9A]"><Clock size={11} />{new Date(task.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}{task.deadlineTime ? ` · ${task.deadlineTime}` : ''}</span>}
                     {task.durationMinutes && <span className="text-[11px] text-[#7B6A9A]">{task.durationMinutes}m</span>}
                     {task.status === 'In Progress' && <span className="text-[11px] text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded-full">In Progress</span>}
                   </div>

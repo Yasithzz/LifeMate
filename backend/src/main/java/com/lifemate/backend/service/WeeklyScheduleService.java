@@ -30,9 +30,11 @@ public class WeeklyScheduleService {
 
     public WeeklySchedule generateForCurrentWeek(String userEmail, int stressIndex, String stressLevel, User user) {
         LocalDate monday = mondayOfCurrentWeek();
+        List<WeeklySchedule> existing = repo.findByUserEmailAndWeekStartDate(userEmail, monday.format(FMT));
+        WeeklySchedule previous = existing.isEmpty() ? null : existing.get(0);
         // Delete ALL existing docs for this user+week (prevents duplicate-doc crashes)
         repo.deleteAllByUserEmailAndWeekStartDate(userEmail, monday.format(FMT));
-        return buildAndSave(userEmail, stressIndex, stressLevel, user, monday);
+        return buildAndSave(userEmail, stressIndex, stressLevel, user, monday, previous);
     }
 
     public WeeklySchedule getLatestOrGenerate(String userEmail, int stressIndex, String stressLevel, User user) {
@@ -46,7 +48,7 @@ public class WeeklyScheduleService {
             }
             return existing.get(0);
         }
-        return buildAndSave(userEmail, stressIndex, stressLevel, user, monday);
+        return buildAndSave(userEmail, stressIndex, stressLevel, user, monday, null);
     }
 
     public Optional<WeeklySchedule> getLatest(String userEmail) {
@@ -83,13 +85,13 @@ public class WeeklyScheduleService {
     // ── Private builders ────────────────────────────────────────────
 
     private WeeklySchedule buildAndSave(String userEmail, int stressIndex, String stressLevel,
-                                         User user, LocalDate monday) {
+                                         User user, LocalDate monday, WeeklySchedule previous) {
         // Collect leave / holiday dates for the week
         List<String> weekDates = new ArrayList<>();
         for (int i = 0; i < 7; i++) weekDates.add(monday.plusDays(i).format(FMT));
         Set<String> leaveDates = new HashSet<>(
             hlRepo.findByUserEmailOrderByDateAsc(userEmail).stream()
-                .map(HolidayLeave::getDate).filter(weekDates::contains).toList());
+                .map(h -> h.getDate()).filter(weekDates::contains).toList());
 
         WeeklySchedule ws = new WeeklySchedule();
         ws.setUserEmail(userEmail);
@@ -105,16 +107,43 @@ public class WeeklyScheduleService {
                 ? user.getWorkingDays()
                 : List.of("MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY"));
 
+        LocalDate today = LocalDate.now();
         for (int i = 0; i < 7; i++) {
             LocalDate date      = monday.plusDays(i);
             String dateStr      = date.format(FMT);
             boolean isLeave     = leaveDates.contains(dateStr);
             boolean isWorkingDay = workingDaySet.contains(DAYS[i]);
-            ws.getDays().put(DAYS[i], isLeave
-                    ? leaveSlots()
-                    : buildDay(stressIndex, !isWorkingDay, user));
+            List<DaySlot> previousDaySlots = previous != null ? previous.getDays().get(DAYS[i]) : null;
+
+            if (date.isBefore(today) && previousDaySlots != null) {
+                // Past days are never reshuffled — keep exactly what they were
+                ws.getDays().put(DAYS[i], previousDaySlots);
+            } else {
+                List<DaySlot> freshSlots = isLeave
+                        ? leaveSlots()
+                        : buildDay(stressIndex, !isWorkingDay, user);
+                ws.getDays().put(DAYS[i], preserveCompleted(freshSlots, previousDaySlots));
+            }
         }
         return repo.save(ws);
+    }
+
+    /** Carries over completed/skipped status (and itemId) from the previous day's slots
+     *  onto the freshly-generated slots at the same start time, so marking a task done
+     *  is never undone by a later reschedule (mood submission, holiday change, etc). */
+    private List<DaySlot> preserveCompleted(List<DaySlot> fresh, List<DaySlot> previous) {
+        if (previous == null || previous.isEmpty()) return fresh;
+        for (DaySlot p : previous) {
+            if (!"completed".equalsIgnoreCase(p.getStatus()) && !"skipped".equalsIgnoreCase(p.getStatus())) continue;
+            for (DaySlot f : fresh) {
+                if (f.getStartTime().equals(p.getStartTime())) {
+                    f.setStatus(p.getStatus());
+                    f.setItemId(p.getItemId());
+                    break;
+                }
+            }
+        }
+        return fresh;
     }
 
     private List<DaySlot> leaveSlots() {
@@ -246,7 +275,7 @@ public class WeeklyScheduleService {
     }
 
     private void sortDay(List<DaySlot> slots) {
-        slots.sort(Comparator.comparing(DaySlot::getStartTime));
+        slots.sort(Comparator.comparing(s -> s.getStartTime()));
     }
 
     private void assignIds(List<DaySlot> slots) {

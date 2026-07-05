@@ -1,0 +1,237 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+
+    <!-- Aurora glow gradients -->
+    <radialGradient id="auroraViolet" cx="25%" cy="18%" r="55%">
+      <stop offset="0%" stop-color="#6D28D9" stop-opacity="0.45"/>
+      <stop offset="60%" stop-color="#4C1D95" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#050213" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="auroraPink" cx="72%" cy="22%" r="45%">
+      <stop offset="0%" stop-color="#BE185D" stop-opacity="0.30"/>
+      <stop offset="55%" stop-color="#9D174D" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#050213" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="auroraIndigo" cx="50%" cy="55%" r="60%">
+      <stop offset="0%" stop-color="#3730A3" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#050213" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="auroraBottom" cx="80%" cy="85%" r="40%">
+      <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#050213" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Moon glow -->
+    <radialGradient id="moonCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#F5F3FF" stop-opacity="1"/>
+      <stop offset="55%"  stop-color="#EDE9FE" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#C4B5D9" stop-opacity="0.6"/>
+    </radialGradient>
+
+    <radialGradient id="moonHalo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#A78BFA" stop-opacity="0.25"/>
+      <stop offset="50%"  stop-color="#7C3AED" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#050213" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Nebula cloud -->
+    <radialGradient id="nebula1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#8B5CF6" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#050213" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="nebula2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#EC4899" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#050213" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Soft blur for glow effects -->
+    <filter id="bigBlur"  x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+    <filter id="midBlur"  x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="30"/>
+    </filter>
+    <filter id="moonBlur" x="-150%" y="-150%" width="400%" height="400%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+    <filter id="starGlow" x="-200%" y="-200%" width="500%" height="500%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="tinyGlow"  x="-300%" y="-300%" width="700%" height="700%">
+      <feGaussianBlur stdDeviation="1.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Bottom vignette -->
+    <linearGradient id="vigBottom" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#050213" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#050213" stop-opacity="0.92"/>
+    </linearGradient>
+
+    <!-- Side vignette -->
+    <radialGradient id="vigCenter" cx="50%" cy="40%" r="65%">
+      <stop offset="0%"   stop-color="#050213" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#050213" stop-opacity="0.6"/>
+    </radialGradient>
+
+  </defs>
+
+  <!-- ─── Base sky ─────────────────────────────────────────────────── -->
+  <rect width="1440" height="900" fill="#050213"/>
+
+  <!-- ─── Deep space gradient layers ──────────────────────────────── -->
+  <!-- Violet aurora bloom top-left -->
+  <ellipse cx="320" cy="160" rx="680" ry="420" fill="url(#auroraViolet)" filter="url(#bigBlur)"/>
+  <!-- Pink bloom top-right -->
+  <ellipse cx="1080" cy="200" rx="580" ry="380" fill="url(#auroraPink)" filter="url(#bigBlur)"/>
+  <!-- Indigo center depth -->
+  <ellipse cx="720" cy="500" rx="900" ry="480" fill="url(#auroraIndigo)" filter="url(#bigBlur)"/>
+  <!-- Violet bloom bottom-right -->
+  <ellipse cx="1200" cy="780" rx="500" ry="300" fill="url(#auroraBottom)" filter="url(#bigBlur)"/>
+
+  <!-- ─── Nebula wisps ──────────────────────────────────────────────── -->
+  <ellipse cx="160"  cy="340" rx="220" ry="120" fill="url(#nebula1)" filter="url(#midBlur)"/>
+  <ellipse cx="1300" cy="400" rx="180" ry="100" fill="url(#nebula2)" filter="url(#midBlur)"/>
+  <ellipse cx="700"  cy="150" rx="260" ry="90"  fill="url(#nebula1)" filter="url(#midBlur)" opacity="0.5"/>
+
+  <!-- ─── Aurora ribbon streaks ─────────────────────────────────────── -->
+  <path d="M-100,220 C200,160 480,280 700,200 C920,120 1150,240 1540,180"
+        fill="none" stroke="#7C3AED" stroke-width="80" stroke-opacity="0.07" stroke-linecap="round"
+        filter="url(#midBlur)"/>
+  <path d="M-100,280 C180,220 440,320 680,260 C900,200 1180,310 1540,250"
+        fill="none" stroke="#A855F7" stroke-width="50" stroke-opacity="0.06" stroke-linecap="round"
+        filter="url(#midBlur)"/>
+  <path d="M-100,320 C250,280 500,340 760,300 C1020,260 1280,360 1540,310"
+        fill="none" stroke="#EC4899" stroke-width="40" stroke-opacity="0.05" stroke-linecap="round"
+        filter="url(#midBlur)"/>
+
+  <!-- ─── Moon ─────────────────────────────────────────────────────── -->
+  <!-- Outer halo -->
+  <circle cx="1180" cy="130" r="160" fill="url(#moonHalo)" filter="url(#moonBlur)"/>
+  <!-- Mid glow ring -->
+  <circle cx="1180" cy="130" r="75"  fill="#A78BFA" fill-opacity="0.12" filter="url(#moonBlur)"/>
+  <!-- Moon body -->
+  <circle cx="1180" cy="130" r="38"  fill="url(#moonCore)"/>
+  <!-- Crescent shadow to make it a crescent moon -->
+  <circle cx="1196" cy="122" r="30"  fill="#06001A" fill-opacity="0.75"/>
+  <!-- Subtle surface texture rings -->
+  <circle cx="1172" cy="136" r="6"   fill="#D8B4FE" fill-opacity="0.18"/>
+  <circle cx="1160" cy="120" r="4"   fill="#D8B4FE" fill-opacity="0.12"/>
+
+  <!-- ─── Glinting 4-point stars ────────────────────────────────────── -->
+  <!-- Large glint - top left zone -->
+  <g filter="url(#starGlow)">
+    <path d="M182,62 L184.5,70 L192,72.5 L184.5,75 L182,83 L179.5,75 L172,72.5 L179.5,70 Z" fill="white" fill-opacity="0.92"/>
+  </g>
+  <!-- Medium glint -->
+  <g filter="url(#starGlow)">
+    <path d="M560,44 L561.8,50 L568,51.8 L561.8,53.6 L560,59.6 L558.2,53.6 L552,51.8 L558.2,50 Z" fill="white" fill-opacity="0.80"/>
+  </g>
+  <!-- Small glint -->
+  <g filter="url(#tinyGlow)">
+    <path d="M870,32 L871.4,37 L876,38.4 L871.4,39.8 L870,44.8 L868.6,39.8 L864,38.4 L868.6,37 Z" fill="white" fill-opacity="0.75"/>
+  </g>
+  <!-- Another glint right side -->
+  <g filter="url(#tinyGlow)">
+    <path d="M1360,88 L1361.4,93 L1366,94.4 L1361.4,95.8 L1360,100.8 L1358.6,95.8 L1354,94.4 L1358.6,93 Z" fill="white" fill-opacity="0.68"/>
+  </g>
+
+  <!-- ─── Star field ─────────────────────────────────────────────────── -->
+  <!-- Bright stars -->
+  <circle cx="48"   cy="42"  r="1.8" fill="white" fill-opacity="0.95" filter="url(#tinyGlow)"/>
+  <circle cx="134"  cy="88"  r="1.4" fill="white" fill-opacity="0.80" filter="url(#tinyGlow)"/>
+  <circle cx="308"  cy="28"  r="1.6" fill="white" fill-opacity="0.88" filter="url(#tinyGlow)"/>
+  <circle cx="446"  cy="72"  r="1.2" fill="white" fill-opacity="0.72" filter="url(#tinyGlow)"/>
+  <circle cx="632"  cy="20"  r="1.8" fill="white" fill-opacity="0.90" filter="url(#tinyGlow)"/>
+  <circle cx="762"  cy="55"  r="1.3" fill="white" fill-opacity="0.75" filter="url(#tinyGlow)"/>
+  <circle cx="920"  cy="38"  r="1.5" fill="white" fill-opacity="0.82" filter="url(#tinyGlow)"/>
+  <circle cx="1048" cy="68"  r="1.2" fill="white" fill-opacity="0.70" filter="url(#tinyGlow)"/>
+  <circle cx="1260" cy="34"  r="1.6" fill="white" fill-opacity="0.85" filter="url(#tinyGlow)"/>
+  <circle cx="1408" cy="60"  r="1.3" fill="white" fill-opacity="0.78" filter="url(#tinyGlow)"/>
+
+  <!-- Medium stars -->
+  <circle cx="92"   cy="140" r="1.1" fill="white" fill-opacity="0.60"/>
+  <circle cx="220"  cy="108" r="1.0" fill="white" fill-opacity="0.55"/>
+  <circle cx="374"  cy="155" r="1.2" fill="white" fill-opacity="0.65"/>
+  <circle cx="498"  cy="118" r="0.9" fill="white" fill-opacity="0.50"/>
+  <circle cx="680"  cy="98"  r="1.1" fill="white" fill-opacity="0.62"/>
+  <circle cx="816"  cy="136" r="1.0" fill="white" fill-opacity="0.58"/>
+  <circle cx="984"  cy="112" r="1.2" fill="white" fill-opacity="0.64"/>
+  <circle cx="1120" cy="185" r="0.9" fill="white" fill-opacity="0.48"/>
+  <circle cx="1310" cy="148" r="1.1" fill="white" fill-opacity="0.56"/>
+  <circle cx="1420" cy="120" r="1.0" fill="white" fill-opacity="0.60"/>
+
+  <!-- Dim distant stars -->
+  <circle cx="72"   cy="210" r="0.8" fill="white" fill-opacity="0.38"/>
+  <circle cx="198"  cy="248" r="0.7" fill="white" fill-opacity="0.32"/>
+  <circle cx="342"  cy="198" r="0.9" fill="white" fill-opacity="0.42"/>
+  <circle cx="488"  cy="230" r="0.7" fill="white" fill-opacity="0.30"/>
+  <circle cx="620"  cy="212" r="0.8" fill="white" fill-opacity="0.36"/>
+  <circle cx="756"  cy="242" r="0.7" fill="white" fill-opacity="0.28"/>
+  <circle cx="892"  cy="206" r="0.9" fill="white" fill-opacity="0.40"/>
+  <circle cx="1028" cy="234" r="0.7" fill="white" fill-opacity="0.30"/>
+  <circle cx="1164" cy="258" r="0.8" fill="white" fill-opacity="0.35"/>
+  <circle cx="1292" cy="222" r="0.7" fill="white" fill-opacity="0.28"/>
+  <circle cx="1388" cy="246" r="0.9" fill="white" fill-opacity="0.38"/>
+
+  <!-- Extra faint stars for depth -->
+  <circle cx="160"  cy="300" r="0.6" fill="white" fill-opacity="0.22"/>
+  <circle cx="290"  cy="330" r="0.6" fill="white" fill-opacity="0.20"/>
+  <circle cx="440"  cy="288" r="0.7" fill="white" fill-opacity="0.24"/>
+  <circle cx="580"  cy="315" r="0.6" fill="white" fill-opacity="0.20"/>
+  <circle cx="720"  cy="298" r="0.6" fill="white" fill-opacity="0.22"/>
+  <circle cx="860"  cy="322" r="0.7" fill="white" fill-opacity="0.24"/>
+  <circle cx="1000" cy="305" r="0.6" fill="white" fill-opacity="0.20"/>
+  <circle cx="1140" cy="335" r="0.6" fill="white" fill-opacity="0.20"/>
+  <circle cx="1280" cy="310" r="0.7" fill="white" fill-opacity="0.22"/>
+  <circle cx="1400" cy="340" r="0.6" fill="white" fill-opacity="0.18"/>
+
+  <!-- Sparse deep-sky stars -->
+  <circle cx="110"  cy="380" r="0.5" fill="white" fill-opacity="0.16"/>
+  <circle cx="260"  cy="420" r="0.5" fill="white" fill-opacity="0.14"/>
+  <circle cx="410"  cy="395" r="0.5" fill="white" fill-opacity="0.16"/>
+  <circle cx="660"  cy="410" r="0.5" fill="white" fill-opacity="0.14"/>
+  <circle cx="830"  cy="390" r="0.5" fill="white" fill-opacity="0.16"/>
+  <circle cx="1060" cy="415" r="0.5" fill="white" fill-opacity="0.14"/>
+  <circle cx="1230" cy="398" r="0.5" fill="white" fill-opacity="0.15"/>
+  <circle cx="1390" cy="430" r="0.5" fill="white" fill-opacity="0.13"/>
+
+  <!-- ─── Peaceful ripple rings (meditation / calm) ──────────────────── -->
+  <!-- Top-left calm center -->
+  <circle cx="140" cy="600" r="55"  fill="none" stroke="#7C3AED" stroke-width="0.6" stroke-opacity="0.18"/>
+  <circle cx="140" cy="600" r="90"  fill="none" stroke="#7C3AED" stroke-width="0.5" stroke-opacity="0.10"/>
+  <circle cx="140" cy="600" r="130" fill="none" stroke="#7C3AED" stroke-width="0.4" stroke-opacity="0.06"/>
+  <circle cx="140" cy="600" r="170" fill="none" stroke="#7C3AED" stroke-width="0.3" stroke-opacity="0.03"/>
+
+  <!-- Bottom-right calm center -->
+  <circle cx="1320" cy="750" r="45"  fill="none" stroke="#EC4899" stroke-width="0.6" stroke-opacity="0.14"/>
+  <circle cx="1320" cy="750" r="80"  fill="none" stroke="#EC4899" stroke-width="0.5" stroke-opacity="0.08"/>
+  <circle cx="1320" cy="750" r="115" fill="none" stroke="#EC4899" stroke-width="0.4" stroke-opacity="0.05"/>
+
+  <!-- ─── Gentle mountain silhouette / horizon ──────────────────────── -->
+  <path d="M0,820 C60,805 120,810 180,795 C230,782 270,790 320,778
+           C370,766 410,774 460,762 C510,750 555,758 600,748
+           C650,738 700,745 750,736 C800,727 850,733 900,726
+           C945,719 990,724 1040,718 C1090,712 1135,716 1180,711
+           C1230,706 1280,709 1320,705 C1365,701 1400,703 1440,700
+           L1440,900 L0,900 Z"
+        fill="#08011F" fill-opacity="0.55"/>
+
+  <path d="M0,855 C80,845 160,852 240,842 C320,832 400,840 480,832
+           C560,824 640,830 720,823 C800,816 880,822 960,816
+           C1040,810 1120,815 1200,810 C1280,805 1360,809 1440,805
+           L1440,900 L0,900 Z"
+        fill="#06011A" fill-opacity="0.80"/>
+
+  <!-- ─── Vignette overlays ─────────────────────────────────────────── -->
+  <!-- Bottom fade into dark -->
+  <rect width="1440" height="900" fill="url(#vigBottom)"/>
+  <!-- Edge darkening -->
+  <rect width="1440" height="900" fill="url(#vigCenter)"/>
+
+</svg>

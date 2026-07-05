@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { Sparkles } from 'lucide-react'
 
 const NAV_LINKS = [
   { href: '/#features',     label: 'Features'     },
@@ -33,10 +34,8 @@ function Navbar() {
       <div className="max-w-[1200px] mx-auto px-6 flex items-center gap-8">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xl bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent select-none">✦</span>
-          <span className="text-[20px] font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">
-            LifeMate
-          </span>
+          <Sparkles size={16} className="text-violet-400" />
+          <span className="text-[15px] font-bold text-white tracking-tight">LifeMate</span>
         </Link>
 
         {/* Desktop Nav Links — always visible so auth pages can navigate home */}

@@ -1,4 +1,13 @@
 package com.lifemate.backend.dto;
 
-public record UserResponse(String id, String fullName, String email, String role) {
-}
+import java.time.Instant;
+
+public record UserResponse(
+        String id,
+        String fullName,
+        String email,
+        String role,
+        Instant createdAt,
+        Instant lastLoginAt,
+        int loginCount
+) {}

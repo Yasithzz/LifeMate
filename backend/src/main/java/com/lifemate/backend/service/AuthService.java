@@ -49,6 +49,10 @@ public class AuthService {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
 
+        user.setLastLoginAt(java.time.Instant.now());
+        user.setLoginCount(user.getLoginCount() + 1);
+        userRepository.save(user);
+
         return toAuthResponse(user);
     }
 

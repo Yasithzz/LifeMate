@@ -1,7 +1,7 @@
 """
 LifeMate Stress-Level Model Trainer
 =====================================
-Trains a GradientBoostingClassifier on stress_dataset.csv.
+Trains a RandomForestClassifier on stress_dataset.csv.
 Run: python train.py
 
 Saves model/stress_model.pkl and model/model_meta.json.
@@ -9,7 +9,7 @@ Saves model/stress_model.pkl and model/model_meta.json.
 import os, json, joblib
 import pandas as pd
 import numpy as np
-from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import classification_report, accuracy_score
@@ -30,6 +30,7 @@ def load_data(path=DATA):
     df = pd.read_csv(path)
     X  = df[FEATURES]
     y  = df[TARGET]
+    
     return X, y
 
 
@@ -54,9 +55,8 @@ def train(X, y):
     if n_total >= MIN_SAMPLES_FOR_SPLIT:
         X_train, X_test, y_train, y_test = train_test_split(
             X_res, y_res, test_size=0.2, random_state=42, stratify=y_res)
-        clf = GradientBoostingClassifier(
-            n_estimators=200, max_depth=5, learning_rate=0.1,
-            subsample=0.8, random_state=42)
+        clf = RandomForestClassifier(
+            n_estimators=200, max_depth=5, random_state=42, n_jobs=-1)
         clf.fit(X_train, y_train)
         y_pred = clf.predict(X_test)
         acc    = accuracy_score(y_test, y_pred)
@@ -68,8 +68,8 @@ def train(X, y):
             print(f"{cv_folds}-fold CV: {cv.mean():.4f} ± {cv.std():.4f}")
     else:
         # Too few samples for split — train on everything
-        clf = GradientBoostingClassifier(
-            n_estimators=100, max_depth=3, learning_rate=0.1, random_state=42)
+        clf = RandomForestClassifier(
+            n_estimators=100, max_depth=3, random_state=42, n_jobs=-1)
         clf.fit(X_res, y_res)
         acc = accuracy_score(y_res, clf.predict(X_res))
         print(f"Trained on all {n_total} samples (train=test). Accuracy: {acc:.4f}")

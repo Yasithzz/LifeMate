@@ -4,6 +4,9 @@ import Navbar from '../components/Navbar'
 import { loginUser } from '../lib/api'
 
 export default function LoginPage() {
+  document.documentElement.setAttribute('data-theme', 'dark')
+  document.documentElement.removeAttribute('data-accent')
+
   const [form, setForm] = useState({ email: '', password: '', remember: false })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')

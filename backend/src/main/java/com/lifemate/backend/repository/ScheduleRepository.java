@@ -8,4 +8,5 @@ import java.util.Optional;
 public interface ScheduleRepository extends MongoRepository<Schedule, String> {
     Optional<Schedule> findTopByUserEmailOrderByCreatedAtDesc(String userEmail);
     Optional<Schedule> findByUserEmailAndScheduleDate(String userEmail, String scheduleDate);
+    void deleteByUserEmail(String userEmail);
 }

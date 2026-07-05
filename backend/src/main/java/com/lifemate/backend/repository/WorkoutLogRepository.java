@@ -9,4 +9,5 @@ import java.util.List;
 public interface WorkoutLogRepository extends MongoRepository<WorkoutLog, String> {
     List<WorkoutLog> findByUserEmailOrderByRecordedAtDesc(String userEmail);
     List<WorkoutLog> findByUserEmailAndRecordedAtBetween(String userEmail, Instant from, Instant to);
+    void deleteByUserEmail(String userEmail);
 }

@@ -10,4 +10,5 @@ public interface HolidayLeaveRepository extends MongoRepository<HolidayLeave, St
     List<HolidayLeave> findByUserEmailOrderByDateAsc(String userEmail);
     Optional<HolidayLeave> findByUserEmailAndDate(String userEmail, String date);
     void deleteByUserEmailAndDate(String userEmail, String date);
+    void deleteByUserEmail(String userEmail);
 }

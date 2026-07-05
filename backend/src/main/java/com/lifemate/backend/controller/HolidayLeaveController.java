@@ -1,11 +1,15 @@
 package com.lifemate.backend.controller;
 
+import com.lifemate.backend.exception.ApiException;
 import com.lifemate.backend.model.HolidayLeave;
 import com.lifemate.backend.repository.HolidayLeaveRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 
@@ -29,6 +33,17 @@ public class HolidayLeaveController {
         String date = body.get("date");
         String type = body.getOrDefault("type", "LEAVE");
         String note = body.getOrDefault("note", "");
+
+        LocalDate parsed;
+        try {
+            parsed = LocalDate.parse(date);
+        } catch (DateTimeParseException | NullPointerException e) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Invalid date");
+        }
+        if (parsed.isBefore(LocalDate.now())) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "Cannot mark a past date as leave or holiday");
+        }
+
         // Upsert — one entry per date
         repo.findByUserEmailAndDate(auth.getName(), date).ifPresent(repo::delete);
         HolidayLeave hl = new HolidayLeave();

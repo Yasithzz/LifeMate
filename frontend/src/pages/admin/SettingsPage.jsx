@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
-  Palette, Globe, Lock, Key, Shield, Mail,
+  Palette, Lock, Key, Shield, Mail,
   CheckCircle, AlertCircle, Loader2, Eye, EyeOff,
-  RefreshCw, Sun, Moon, Monitor, Check,
-  ShieldCheck,
+  RefreshCw, Sun, Moon, Monitor, Check, ShieldCheck,
 } from 'lucide-react'
 import AdminLayout from '../../components/AdminLayout'
 import {
@@ -42,69 +41,68 @@ const ACCENT_COLORS = [
   { name: 'Indigo', value: 'indigo', hex: ['#4338ca', '#8b5cf6'] },
 ]
 const THEMES = [
-  { id: 'dark', label: 'Dark', icon: Moon },
-  { id: 'system', label: 'System', icon: Monitor },
-  { id: 'light', label: 'Light', icon: Sun },
+  { id: 'dark',   label: 'Dark',   icon: Moon,    desc: 'Default dark theme' },
+  { id: 'system', label: 'System', icon: Monitor, desc: 'Follow system setting' },
+  { id: 'light',  label: 'Light',  icon: Sun,     desc: 'Bright light theme' },
 ]
-const LANGUAGES = ['English (US)', 'English (UK)', 'Spanish', 'French', 'German', 'Japanese', 'Chinese (Simplified)', 'Arabic', 'Hindi']
-const TIMEZONES = ['(GMT+5:30) Colombo', '(GMT+0:00) London', '(GMT-5:00) New York', '(GMT-8:00) Los Angeles', '(GMT+9:00) Tokyo']
+
+function applyThemeToDom(t) {
+  const resolved = t === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : t
+  document.documentElement.setAttribute('data-theme', resolved)
+}
 
 const NAV = [
   {
     group: 'General',
     items: [
       { id: 'appearance', label: 'Appearance', icon: Palette },
-      { id: 'language', label: 'Language & Region', icon: Globe },
     ],
   },
   {
     group: 'Security & Login',
     items: [
-      { id: 'password', label: 'Change Password', icon: Lock },
-      { id: 'forgot', label: 'Forgot Password', icon: Key },
-      { id: 'verifications', label: 'Verifications', icon: Shield },
+      { id: 'password',      label: 'Change Password', icon: Lock },
+      { id: 'forgot',        label: 'Forgot Password', icon: Key },
+      { id: 'verifications', label: 'Verifications',   icon: Shield },
     ],
   },
 ]
 
 export default function AdminSettingsPage() {
   const session = getSession()
-  const [active, setActive] = useState('password')
-  const [security, setSecurity] = useState(null)
+  const [active, setActive] = useState('appearance')
+  const [security, setSecurity]     = useState(null)
   const [loadingSec, setLoadingSec] = useState(true)
 
   // appearance
-  const [accent, setAccent] = useState(() => localStorage.getItem('lm_accent') || 'violet')
-  const [theme, setTheme] = useState(() => localStorage.getItem('lm_theme') || 'dark')
+  const [accent, setAccent]         = useState(() => localStorage.getItem('lm_accent') || 'violet')
+  const [theme, setTheme]           = useState(() => localStorage.getItem('lm_theme')  || 'dark')
   const [appearSaved, setAppearSaved] = useState(false)
 
-  // language
-  const [lang, setLang] = useState(() => localStorage.getItem('lm_lang') || 'English (US)')
-  const [tz, setTz] = useState(() => localStorage.getItem('lm_tz') || '(GMT+5:30) Colombo')
-  const [langSaved, setLangSaved] = useState(false)
-
   // change pw
-  const [cpForm, setCpForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
-  const [cpBusy, setCpBusy] = useState(false)
+  const [cpForm, setCpForm]   = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [cpBusy, setCpBusy]   = useState(false)
   const [cpError, setCpError] = useState('')
   const [cpSuccess, setCpSuccess] = useState(false)
 
-  // email otp
-  const [evOtp, setEvOtp] = useState('')
+  // forgot pw
+  const [fpStep, setFpStep]       = useState(0)
+  const [fpEmail, setFpEmail]     = useState('')
+  const [fpOtp, setFpOtp]         = useState('')
+  const [fpPw, setFpPw]           = useState('')
+  const [fpCpw, setFpCpw]         = useState('')
+  const [fpBusy, setFpBusy]       = useState(false)
+  const [fpError, setFpError]     = useState('')
+  const [fpSuccess, setFpSuccess] = useState(false)
+  const [fpResend, setFpResend]   = useState(false)
+
+  // email verify
+  const [evOtp, setEvOtp]   = useState('')
   const [evSent, setEvSent] = useState(false)
   const [evBusy, setEvBusy] = useState(false)
   const [evError, setEvError] = useState('')
-
-  // forgot pw
-  const [fpStep, setFpStep] = useState(0)
-  const [fpEmail, setFpEmail] = useState('')
-  const [fpOtp, setFpOtp] = useState('')
-  const [fpPw, setFpPw] = useState('')
-  const [fpCpw, setFpCpw] = useState('')
-  const [fpBusy, setFpBusy] = useState(false)
-  const [fpError, setFpError] = useState('')
-  const [fpSuccess, setFpSuccess] = useState(false)
-  const [fpResend, setFpResend] = useState(false)
 
   useEffect(() => {
     getSecurityInfo().then(s => { if (s) setSecurity(s) }).catch(() => {}).finally(() => setLoadingSec(false))
@@ -138,7 +136,8 @@ export default function AdminSettingsPage() {
 
   const sendEmailOtp = async () => {
     setEvError(''); setEvBusy(true)
-    try { await sendEmailVerificationOtp(); setEvSent(true) } catch (e) { setEvError(e.message) } finally { setEvBusy(false) }
+    try { await sendEmailVerificationOtp(); setEvSent(true) }
+    catch (e) { setEvError(e.message) } finally { setEvBusy(false) }
   }
 
   const doVerifyEmail = async (e) => {
@@ -147,12 +146,23 @@ export default function AdminSettingsPage() {
     catch (e) { setEvError(e.message) } finally { setEvBusy(false) }
   }
 
-  const sel = inputCls + ' cursor-pointer'
+  const saveAppearance = () => {
+    localStorage.setItem('lm_accent', accent)
+    localStorage.setItem('lm_theme', theme)
+    if (accent !== 'violet') {
+      document.documentElement.setAttribute('data-accent', accent)
+    } else {
+      document.documentElement.removeAttribute('data-accent')
+    }
+    applyThemeToDom(theme)
+    setAppearSaved(true)
+    setTimeout(() => setAppearSaved(false), 2000)
+  }
 
   return (
     <AdminLayout>
       {/* Admin identity banner */}
-      <div className="flex items-center gap-4 bg-white/5 border border-violet-500/15 rounded-2xl p-4 mb-6">
+      <div className="flex items-center gap-4 bg-white/5 border border-violet-500/15 rounded-2xl p-4 mb-8">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center flex-shrink-0">
           <ShieldCheck size={18} className="text-white" />
         </div>
@@ -162,21 +172,26 @@ export default function AdminSettingsPage() {
         </div>
       </div>
 
-      <div className="mb-5">
+      <div className="mb-6">
         <h1 className="text-[24px] font-extrabold text-white tracking-tight">Settings</h1>
         <p className="text-[#7B6A9A] text-sm mt-0.5">Manage admin account preferences and security</p>
       </div>
 
       <div className="flex gap-8 items-start">
-        {/* Sidebar */}
+
+        {/* Sidebar nav — matches user settings style */}
         <aside className="w-52 flex-shrink-0 sticky top-8">
           {NAV.map(({ group, items }) => (
             <div key={group} className="mb-6">
-              <p className="text-[11px] font-bold uppercase tracking-widest text-[#4A3F6A] px-3 mb-1.5">{group}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#3A3060] px-3 mb-1.5">{group}</p>
               <div className="space-y-0.5">
                 {items.map(({ id, label, icon: Icon }) => (
                   <button key={id} onClick={() => setActive(id)}
-                    className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-[13.5px] font-medium transition-all duration-200 text-left ${active === id ? 'bg-violet-600/20 text-violet-300 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.2)]' : 'text-[#7B6A9A] hover:bg-white/5 hover:text-violet-300'}`}>
+                    className={`flex items-center gap-2.5 w-full px-2 py-2 my-0.5 rounded-lg text-[13px] font-medium transition-all duration-150 text-left border-l-2 pl-[6px]
+                      ${active === id
+                        ? 'text-white border-violet-500 bg-white/[0.04]'
+                        : 'text-[#5A4F7A] border-transparent hover:text-[#C4B5D9] hover:bg-white/[0.03]'
+                      }`}>
                     <Icon size={15} className="flex-shrink-0" />
                     {label}
                   </button>
@@ -192,26 +207,42 @@ export default function AdminSettingsPage() {
           {/* Appearance */}
           {active === 'appearance' && (
             <div className="space-y-8 max-w-xl">
-              <div><h2 className="text-[18px] font-bold text-white mb-1">Appearance</h2><p className="text-[#7B6A9A] text-sm">Customize how the admin panel looks</p></div>
+              <div>
+                <h2 className="text-[18px] font-bold text-white mb-1">Appearance</h2>
+                <p className="text-[#7B6A9A] text-sm">Customize how the admin panel looks on your device</p>
+              </div>
+
+              {/* Theme */}
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] mb-3">Theme</p>
                 <div className="grid grid-cols-3 gap-3">
-                  {THEMES.map(({ id, label, icon: Icon }) => (
-                    <button key={id} onClick={() => setTheme(id)} disabled={id === 'light'}
-                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 ${theme === id ? 'bg-violet-600/20 border-violet-500/50' : 'bg-white/5 border-violet-500/10 hover:border-violet-500/30'} ${id === 'light' ? 'opacity-40 cursor-not-allowed' : ''}`}>
-                      {theme === id && <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center"><Check size={10} className="text-white" /></div>}
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${theme === id ? 'bg-violet-500/30' : 'bg-white/8'}`}><Icon size={20} className={theme === id ? 'text-violet-300' : 'text-[#7B6A9A]'} /></div>
+                  {THEMES.map(({ id, label, icon: Icon, desc }) => (
+                    <button key={id} onClick={() => setTheme(id)}
+                      className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border transition-all duration-200 cursor-pointer
+                        ${theme === id ? 'bg-violet-600/20 border-violet-500/50' : 'bg-white/5 border-violet-500/10 hover:border-violet-500/30'}`}>
+                      {theme === id && (
+                        <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-violet-500 flex items-center justify-center">
+                          <Check size={10} className="text-white" />
+                        </div>
+                      )}
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${theme === id ? 'bg-violet-500/30' : 'bg-white/8'}`}>
+                        <Icon size={20} className={theme === id ? 'text-violet-300' : 'text-[#7B6A9A]'} />
+                      </div>
                       <span className={`text-[13px] font-medium ${theme === id ? 'text-white' : 'text-[#9F8BC7]'}`}>{label}</span>
+                      <span className="text-[11px] text-[#6B5E8A]">{desc}</span>
                     </button>
                   ))}
                 </div>
               </div>
+
+              {/* Accent */}
               <div>
                 <p className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] mb-3">Accent Color</p>
                 <div className="flex gap-3">
                   {ACCENT_COLORS.map(c => (
                     <button key={c.value} onClick={() => setAccent(c.value)}
-                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all duration-200 flex-1 ${accent === c.value ? 'bg-white/10 border-white/25' : 'bg-white/5 border-violet-500/10 hover:border-violet-500/25'}`}>
+                      className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all duration-200 flex-1
+                        ${accent === c.value ? 'bg-white/10 border-white/25' : 'bg-white/5 border-violet-500/10 hover:border-violet-500/25'}`}>
                       <div className="w-8 h-8 rounded-full flex items-center justify-center"
                         style={{ background: `linear-gradient(135deg, ${c.hex[0]}, ${c.hex[1]})` }}>
                         {accent === c.value && <Check size={14} className="text-white" />}
@@ -221,29 +252,14 @@ export default function AdminSettingsPage() {
                   ))}
                 </div>
               </div>
-              {appearSaved && <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2"><CheckCircle size={14} />Saved!</div>}
-              <button onClick={() => { localStorage.setItem('lm_accent', accent); localStorage.setItem('lm_theme', theme); if (accent !== 'violet') { document.documentElement.setAttribute('data-accent', accent) } else { document.documentElement.removeAttribute('data-accent') }; setAppearSaved(true); setTimeout(() => setAppearSaved(false), 2000) }}
-                className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200">
-                Save Appearance
-              </button>
-            </div>
-          )}
 
-          {/* Language */}
-          {active === 'language' && (
-            <div className="space-y-8 max-w-xl">
-              <div><h2 className="text-[18px] font-bold text-white mb-1">Language & Region</h2><p className="text-[#7B6A9A] text-sm">Choose your preferred language and timezone</p></div>
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-start gap-2">
-                <AlertCircle size={15} className="text-amber-400 flex-shrink-0 mt-0.5" />
-                <p className="text-[12px] text-amber-300">Multi-language support is coming soon. Preferences will be saved.</p>
-              </div>
-              <div className="space-y-5">
-                <div><label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Language</label><select className={sel} value={lang} onChange={e => setLang(e.target.value)}>{LANGUAGES.map(l => <option key={l}>{l}</option>)}</select></div>
-                <div><label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Timezone</label><select className={sel} value={tz} onChange={e => setTz(e.target.value)}>{TIMEZONES.map(t => <option key={t}>{t}</option>)}</select></div>
-              </div>
-              {langSaved && <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2"><CheckCircle size={14} />Saved!</div>}
-              <button onClick={() => { localStorage.setItem('lm_lang', lang); localStorage.setItem('lm_tz', tz); setLangSaved(true); setTimeout(() => setLangSaved(false), 2000) }}
-                className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200">
+              {appearSaved && (
+                <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2">
+                  <CheckCircle size={14} /> Preferences saved!
+                </div>
+              )}
+              <button onClick={saveAppearance}
+                className="px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_20px_rgba(124,58,237,0.35)]">
                 Save Preferences
               </button>
             </div>
@@ -252,14 +268,18 @@ export default function AdminSettingsPage() {
           {/* Change Password */}
           {active === 'password' && (
             <div className="space-y-6 max-w-lg">
-              <div><h2 className="text-[18px] font-bold text-white mb-1">Change Password</h2><p className="text-[#7B6A9A] text-sm">Admin password is BCrypt-hashed and never exposed through any API response</p></div>
+              <div>
+                <h2 className="text-[18px] font-bold text-white mb-1">Change Password</h2>
+                <p className="text-[#7B6A9A] text-sm">Update your admin account password</p>
+              </div>
               <form onSubmit={handleChangePassword} className="space-y-4">
                 <div><label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Current password</label><PasswordInput placeholder="Enter current password" value={cpForm.currentPassword} onChange={e => { setCpForm(f => ({ ...f, currentPassword: e.target.value })); setCpError('') }} /></div>
                 <div><label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">New password</label><PasswordInput placeholder="Min. 6 characters" value={cpForm.newPassword} onChange={e => { setCpForm(f => ({ ...f, newPassword: e.target.value })); setCpError('') }} /></div>
                 <div><label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Confirm new password</label><PasswordInput placeholder="Repeat new password" value={cpForm.confirmPassword} onChange={e => { setCpForm(f => ({ ...f, confirmPassword: e.target.value })); setCpError('') }} /></div>
                 {cpError && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{cpError}</p>}
                 {cpSuccess && <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2"><CheckCircle size={14} />Password updated!</div>}
-                <button type="submit" disabled={cpBusy} className="flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_20px_rgba(124,58,237,0.35)] disabled:opacity-60">
+                <button type="submit" disabled={cpBusy}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_20px_rgba(124,58,237,0.35)] disabled:opacity-60">
                   {cpBusy && <Loader2 size={14} className="animate-spin" />} Update Password
                 </button>
               </form>
@@ -269,27 +289,32 @@ export default function AdminSettingsPage() {
           {/* Forgot Password */}
           {active === 'forgot' && (
             <div className="space-y-6 max-w-lg">
-              <div><h2 className="text-[18px] font-bold text-white mb-1">Forgot Password</h2><p className="text-[#7B6A9A] text-sm">Reset via OTP sent to your email</p></div>
-              {fpSuccess && <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2"><CheckCircle size={14} />Password reset! Log in with your new password.</div>}
+              <div>
+                <h2 className="text-[18px] font-bold text-white mb-1">Forgot Password</h2>
+                <p className="text-[#7B6A9A] text-sm">Reset via OTP sent to your email</p>
+              </div>
+              {fpSuccess && <div className="flex items-center gap-2 text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-3 py-2"><CheckCircle size={14} />Password reset successfully.</div>}
               {fpStep === 0 && (
                 <form onSubmit={handleFpInitiate} className="space-y-4">
                   <div><label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Admin email</label><input type="email" className={inputCls} placeholder="admin@lifemate.com" required value={fpEmail} onChange={e => { setFpEmail(e.target.value); setFpError('') }} /></div>
                   {fpError && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{fpError}</p>}
-                  <button type="submit" disabled={fpBusy} className="flex items-center gap-2 px-5 py-2.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold rounded-xl text-[14px] hover:bg-amber-500/25 transition-colors disabled:opacity-60">
+                  <button type="submit" disabled={fpBusy}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200 shadow-[0_4px_20px_rgba(124,58,237,0.35)] disabled:opacity-60">
                     {fpBusy && <Loader2 size={14} className="animate-spin" />} Send OTP
                   </button>
                 </form>
               )}
               {fpStep === 1 && (
                 <form onSubmit={handleFpReset} className="space-y-4">
-                  <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl p-3 text-[13px] text-violet-300">OTP sent. Valid for 10 minutes.</div>
+                  <div className="bg-violet-500/10 border border-violet-500/20 rounded-xl p-3 text-[13px] text-violet-300">OTP sent to your email. Valid for 10 minutes.</div>
                   <div>
                     <label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">One-time password</label>
                     <div className="flex gap-2">
                       <input className={inputCls + ' text-center text-xl tracking-[0.4em] font-bold'} placeholder="000000" maxLength={6} value={fpOtp}
                         onChange={e => { setFpOtp(e.target.value.replace(/\D/g, '')); setFpError('') }} autoFocus />
-                      <button type="button" onClick={async () => { setFpResend(true); try { await forgotPasswordInitiate(fpEmail, 'email') } catch { /* ignore */ } finally { setFpResend(false) } }}
-                        disabled={fpResend} className="p-3.5 bg-white/5 border border-violet-500/20 rounded-xl text-[#7B6A9A] hover:text-violet-400 transition-colors">
+                      <button type="button" disabled={fpResend}
+                        onClick={async () => { setFpResend(true); try { await forgotPasswordInitiate(fpEmail, 'email') } catch { } finally { setFpResend(false) } }}
+                        className="p-3.5 bg-white/5 border border-violet-500/20 rounded-xl text-[#7B6A9A] hover:text-violet-400 transition-colors">
                         <RefreshCw size={16} className={fpResend ? 'animate-spin' : ''} />
                       </button>
                     </div>
@@ -298,10 +323,14 @@ export default function AdminSettingsPage() {
                   <div><label className="text-[12px] font-semibold uppercase tracking-widest text-[#7B6A9A] block mb-1.5">Confirm password</label><PasswordInput placeholder="Repeat" value={fpCpw} onChange={e => { setFpCpw(e.target.value); setFpError('') }} /></div>
                   {fpError && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{fpError}</p>}
                   <div className="flex gap-3">
-                    <button type="submit" disabled={fpBusy || fpOtp.length < 6} className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60">
+                    <button type="submit" disabled={fpBusy || fpOtp.length < 6}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-violet-600 to-pink-500 text-white font-bold rounded-xl text-[14px] hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-60">
                       {fpBusy && <Loader2 size={14} className="animate-spin" />} Reset Password
                     </button>
-                    <button type="button" onClick={() => { setFpStep(0); setFpError('') }} className="px-4 py-2.5 rounded-xl border border-violet-500/20 text-[#9F8BC7] hover:bg-white/5 text-[14px]">Back</button>
+                    <button type="button" onClick={() => { setFpStep(0); setFpError('') }}
+                      className="px-4 py-2.5 rounded-xl border border-violet-500/20 text-[#9F8BC7] hover:bg-white/5 text-[14px] transition-colors">
+                      Back
+                    </button>
                   </div>
                 </form>
               )}
@@ -314,9 +343,10 @@ export default function AdminSettingsPage() {
               ? <div className="flex justify-center py-16"><Loader2 size={24} className="text-violet-400 animate-spin" /></div>
               : (
                 <div className="space-y-8 max-w-lg">
-                  <div><h2 className="text-[18px] font-bold text-white mb-1">Verifications</h2><p className="text-[#7B6A9A] text-sm">Verify contact details to enable OTP-based recovery and additional security</p></div>
-
-                  {/* Email */}
+                  <div>
+                    <h2 className="text-[18px] font-bold text-white mb-1">Verifications</h2>
+                    <p className="text-[#7B6A9A] text-sm">Verify contact details to enable OTP-based recovery</p>
+                  </div>
                   <div className="bg-white/5 border border-violet-500/15 rounded-2xl p-5 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -334,22 +364,23 @@ export default function AdminSettingsPage() {
                             <button type="button" onClick={sendEmailOtp} className="p-3 bg-white/5 border border-violet-500/20 rounded-xl text-[#7B6A9A] hover:text-violet-400 transition-colors"><RefreshCw size={15} /></button>
                           </div>
                           {evError && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{evError}</p>}
-                          <button type="submit" disabled={evBusy || evOtp.length < 6} className="flex items-center gap-2 px-4 py-2 bg-sky-500/15 border border-sky-500/25 text-sky-400 font-semibold rounded-xl text-[13px] hover:bg-sky-500/25 transition-colors disabled:opacity-60">
+                          <button type="submit" disabled={evBusy || evOtp.length < 6}
+                            className="flex items-center gap-2 px-4 py-2 bg-sky-500/15 border border-sky-500/25 text-sky-400 font-semibold rounded-xl text-[13px] hover:bg-sky-500/25 transition-colors disabled:opacity-60">
                             {evBusy && <Loader2 size={13} className="animate-spin" />} Verify Email
                           </button>
                         </form>
                       ) : (
                         <>
                           {evError && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">{evError}</p>}
-                          <button onClick={sendEmailOtp} disabled={evBusy} className="flex items-center gap-2 px-4 py-2 bg-sky-500/10 border border-sky-500/20 text-sky-400 font-semibold rounded-xl text-[13px] hover:bg-sky-500/20 transition-colors disabled:opacity-60">
+                          <button onClick={sendEmailOtp} disabled={evBusy}
+                            className="flex items-center gap-2 px-4 py-2 bg-sky-500/10 border border-sky-500/20 text-sky-400 font-semibold rounded-xl text-[13px] hover:bg-sky-500/20 transition-colors disabled:opacity-60">
                             {evBusy ? <Loader2 size={13} className="animate-spin" /> : <Mail size={13} />} Send Verification Code
                           </button>
                         </>
                       )
                     )}
-                    {security?.emailVerified && <p className="text-[12px] text-emerald-400">Email verified — can be used for OTP-based password recovery.</p>}
+                    {security?.emailVerified && <p className="text-[12px] text-emerald-400">Email verified — used for OTP-based password recovery.</p>}
                   </div>
-
                 </div>
               )
           )}

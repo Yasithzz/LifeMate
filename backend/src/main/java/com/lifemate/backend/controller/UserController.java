@@ -42,4 +42,10 @@ public class UserController {
         userService.changePassword(authentication.getName(), request);
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteMyAccount(Authentication authentication) {
+        userService.deleteAccount(authentication.getName());
+        return ResponseEntity.noContent().build();
+    }
 }

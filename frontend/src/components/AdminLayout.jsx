@@ -1,114 +1,122 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Users, Settings, LogOut, ShieldCheck, Menu, X } from 'lucide-react'
+import { LayoutDashboard, Users, Settings, LogOut, ShieldCheck, Menu, X, MessageSquare } from 'lucide-react'
 import { clearSession, getSession } from '../lib/api'
 
 const NAV = [
-  { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/admin/users', icon: Users, label: 'User Management' },
-  { to: '/admin/settings', icon: Settings, label: 'Settings' },
+  { to: '/admin',             icon: LayoutDashboard, label: 'Overview',  end: true },
+  { to: '/admin/users',       icon: Users,           label: 'Users' },
+  { to: '/admin/feedbacks',   icon: MessageSquare,   label: 'Feedback' },
+  { to: '/admin/settings',    icon: Settings,        label: 'Settings' },
 ]
 
+function applyAdminTheme() {
+  const theme = localStorage.getItem('lm_theme') || 'dark'
+  const resolved = theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme
+  document.documentElement.setAttribute('data-theme', resolved)
+
+  const accent = localStorage.getItem('lm_accent') || 'violet'
+  if (accent !== 'violet') {
+    document.documentElement.setAttribute('data-accent', accent)
+  } else {
+    document.documentElement.removeAttribute('data-accent')
+  }
+}
+
 export default function AdminLayout({ children }) {
+  // Synchronous — runs before first paint so there's no flash on inter-admin navigation
+  applyAdminTheme()
+
   const navigate = useNavigate()
   const session = getSession()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  const handleLogout = () => {
-    clearSession()
-    navigate('/login')
-  }
+  const handleLogout = () => { clearSession(); navigate('/login') }
 
   return (
-    <div className="min-h-screen bg-[#050213] font-[Inter,system-ui,sans-serif]">
-      {/* Mobile overlay */}
+    <div className="min-h-screen font-[Inter,system-ui,sans-serif]" style={{ backgroundColor: 'var(--lm-bg)' }}>
+
       {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/60 z-30 md:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/70 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 h-screen w-64 bg-[#0A0420]/95 backdrop-blur-xl border-r border-violet-500/10 flex flex-col z-40 transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
+      <aside
+        style={{ backgroundColor: 'var(--lm-sidebar)' }}
+        className={`
+        fixed top-0 left-0 h-screen w-56
+        backdrop-blur-2xl
+        border-r border-white/[0.05]
+        flex flex-col z-40
+        transition-transform duration-300 ease-in-out
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+      `}>
+
         {/* Logo */}
-        <div className="px-6 py-5 border-b border-violet-500/10 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <ShieldCheck size={18} className="text-violet-400 flex-shrink-0" />
-            <span className="text-[16px] font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">
-              LifeMate Admin
-            </span>
+        <div className="px-5 pt-6 pb-5 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={15} className="text-violet-500" />
+            <div>
+              <span className="text-[14px] font-bold text-white tracking-tight">LifeMate</span>
+              <span className="ml-2 text-[10px] font-semibold text-[#3A3060] uppercase tracking-wider">Admin</span>
+            </div>
           </div>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="md:hidden p-1.5 text-[#7B6A9A] hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-            aria-label="Close menu"
-          >
-            <X size={18} />
+          <button onClick={() => setSidebarOpen(false)} className="md:hidden text-[#4A3F6A] hover:text-white transition-colors p-1">
+            <X size={16} />
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-0.5">
-          {NAV.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/admin'}
-              onClick={() => setSidebarOpen(false)}
+        {/* Nav */}
+        <nav className="flex-1 px-3 pb-4">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#3A3060] px-2 mb-1.5">Navigation</p>
+          {NAV.map(({ to, icon: Icon, label, end }) => (
+            <NavLink key={to} to={to} end={end} onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13.5px] font-medium transition-all duration-200 ${
-                  isActive
-                    ? 'bg-violet-600/20 text-violet-300 shadow-[inset_0_0_0_1px_rgba(139,92,246,0.2)]'
-                    : 'text-[#7B6A9A] hover:bg-white/5 hover:text-violet-300'
+                `flex items-center gap-2.5 px-2 py-2 my-0.5 rounded-lg text-[13px] font-medium transition-all duration-150
+                border-l-2 pl-[6px]
+                ${isActive
+                  ? 'text-white border-violet-500 bg-white/[0.04]'
+                  : 'text-[#5A4F7A] border-transparent hover:text-[#C4B5D9] hover:bg-white/[0.03]'
                 }`
               }
             >
-              <Icon size={17} />
+              <Icon size={15} className="flex-shrink-0" />
               {label}
             </NavLink>
           ))}
         </nav>
 
-        {/* Admin info + logout */}
-        <div className="px-3 py-4 border-t border-violet-500/10">
-          <div className="flex items-center gap-3 px-3 py-2 mb-1">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-              A
+        {/* Admin strip */}
+        <div className="px-3 pb-4 border-t border-white/[0.04] pt-3">
+          <div className="flex items-center gap-2.5 px-2 py-2">
+            <div className="w-7 h-7 rounded-full bg-violet-900 flex items-center justify-center text-violet-300 text-[11px] font-bold flex-shrink-0 ring-1 ring-white/10">
+              {session?.fullName?.[0]?.toUpperCase() ?? 'A'}
             </div>
-            <div className="min-w-0">
-              <p className="text-[13px] font-semibold text-white truncate">{session?.fullName ?? 'Admin'}</p>
-              <p className="text-[11px] text-[#6B5E8A] truncate">Administrator</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-semibold text-[#C4B5D9] truncate">{session?.fullName ?? 'Admin'}</p>
             </div>
+            <button onClick={handleLogout} title="Log out"
+              className="text-[#3A3060] hover:text-red-400 transition-colors p-1 flex-shrink-0">
+              <LogOut size={13} />
+            </button>
           </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 px-3 py-2.5 w-full rounded-xl text-[13.5px] font-medium text-[#7B6A9A] hover:bg-red-500/10 hover:text-red-400 transition-all duration-200"
-          >
-            <LogOut size={17} />
-            Log out
-          </button>
         </div>
       </aside>
 
-      {/* Mobile top header */}
-      <header className="md:hidden fixed top-0 left-0 right-0 h-14 bg-[#0A0420]/95 backdrop-blur-xl border-b border-violet-500/10 flex items-center px-4 gap-3 z-20">
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="p-2 -ml-2 text-[#7B6A9A] hover:text-white rounded-lg hover:bg-white/5 transition-colors"
-          aria-label="Open menu"
-        >
-          <Menu size={22} />
+      {/* Mobile header */}
+      <header style={{ backgroundColor: 'var(--lm-sidebar)' }} className="md:hidden fixed top-0 left-0 right-0 h-12 backdrop-blur-2xl border-b border-white/[0.05] flex items-center px-4 gap-3 z-20">
+        <button onClick={() => setSidebarOpen(true)} className="text-[#5A4F7A] hover:text-white transition-colors" aria-label="Menu">
+          <Menu size={20} />
         </button>
-        <span className="text-[17px] font-extrabold tracking-tight bg-gradient-to-r from-violet-400 to-pink-400 bg-clip-text text-transparent">
-          LifeMate Admin
-        </span>
+        <span className="text-[15px] font-bold text-white tracking-tight">LifeMate</span>
+        <span className="text-[10px] font-semibold text-[#3A3060] uppercase tracking-wider">Admin</span>
       </header>
 
-      {/* Main content */}
-      <main className="md:ml-64 min-h-screen pt-14 md:pt-0">
-        <div className="fixed top-14 md:top-0 right-[10%] w-[500px] h-[400px] bg-violet-600/5 rounded-full blur-[150px] pointer-events-none z-0" />
-        <div className="relative z-10 p-4 sm:p-6 md:p-8">
+      {/* Main */}
+      <main className="md:ml-56 min-h-screen pt-12 md:pt-0">
+        <div className="relative z-10 p-5 sm:p-7 md:p-10">
           {children}
         </div>
       </main>
