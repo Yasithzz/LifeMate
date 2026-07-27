@@ -12067,3 +12067,5 @@ mood,workload,sleep_hours,energy_level,social_interaction,exercise_done,screen_t
 1,3,7.0,3,3,0,4.0,6.0,2
 1,4,7.0,3,3,0,4.0,6.0,3
 3,5,7.0,2,3,0,4.0,6.0,2
+1,3,7.0,3,3,0,4.0,6.0,2
+1,5,7.0,3,4,0,4.0,6.0,3
